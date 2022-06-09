@@ -32,8 +32,8 @@ export type RelayExtensionContext = {
   extensionContext: ExtensionContext;
   primaryOutputChannel: OutputChannel;
   compilerTerminal: Terminal | null;
-  relayBinaryExecutionOptions: {
+  relayBinaryExecutionOptions: Array<{
     rootPath: string;
     binaryPath: string;
-  };
+  }>;
 };

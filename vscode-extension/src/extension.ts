@@ -31,10 +31,10 @@ async function buildRelayExtensionContext(
   extensionContext.subscriptions.push(lspOutputChannel);
   extensionContext.subscriptions.push(primaryOutputChannel);
 
-  let rootPath = workspace.rootPath || process.cwd();
-  if (config.rootDirectory) {
-    rootPath = path.join(rootPath, config.rootDirectory);
-  }
+  const rootPath = workspace.rootPath || process.cwd();
+  // if (config.rootDirectory) {
+  //   rootPath = path.join(rootPath, config.rootDirectory);
+  // }
 
   const binaryPath = await findRelayBinaryWithWarnings(primaryOutputChannel);
 
@@ -46,10 +46,20 @@ async function buildRelayExtensionContext(
       lspOutputChannel,
       primaryOutputChannel,
       compilerTerminal: null,
-      relayBinaryExecutionOptions: {
-        rootPath,
-        binaryPath,
-      },
+      relayBinaryExecutionOptions: [
+        {
+          rootPath: path.join(rootPath, 'apps/arceus'),
+          binaryPath: path.join(rootPath, 'node_modules/relay-compiler/macos-arm64/relay'),
+        },
+        {
+          rootPath: path.join(rootPath, 'apps/finhub-tools'),
+          binaryPath: path.join(rootPath, 'node_modules/relay-compiler/macos-arm64/relay'),
+        },
+        {
+          rootPath: path.join(rootPath, 'apps/agent-cockpit'),
+          binaryPath: path.join(rootPath, 'node_modules/relay-compiler/macos-arm64/relay'),
+        },
+      ],
     };
   }
 

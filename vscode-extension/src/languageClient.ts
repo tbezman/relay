@@ -19,72 +19,76 @@ import { getConfig } from './config';
 export function createAndStartLanguageClient(context: RelayExtensionContext) {
   const config = getConfig();
 
-  context.primaryOutputChannel.appendLine(
-    `Using relay binary: ${context.relayBinaryExecutionOptions.binaryPath}`,
-  );
+  context.relayBinaryExecutionOptions.forEach((executionThing) => {
+    context.primaryOutputChannel.appendLine(
+      `Using relay binary: ${executionThing.binaryPath}`,
+    );
 
-  const args = ['lsp', `--output=${config.lspOutputLevel}`];
+    const args = ['lsp', `--output=${config.lspOutputLevel}`];
 
-  if (config.pathToConfig) {
-    args.push(config.pathToConfig);
-  }
+    if (config.pathToConfig) {
+      args.push(config.pathToConfig);
+    }
 
-  const serverOptions: ServerOptions = {
-    options: {
-      cwd: context.relayBinaryExecutionOptions.rootPath,
-    },
-    command: context.relayBinaryExecutionOptions.binaryPath,
-    args,
-  };
+    const serverOptions: ServerOptions = {
+      options: {
+        cwd: executionThing.rootPath,
+      },
+      command: executionThing.binaryPath,
+      args,
+    };
 
-  // Options to control the language client
-  const clientOptions: LanguageClientOptions = {
-    markdown: {
-      isTrusted: true,
-    },
-    documentSelector: [
-      { scheme: 'file', language: 'javascript' },
-      { scheme: 'file', language: 'typescript' },
-      { scheme: 'file', language: 'typescriptreact' },
-      { scheme: 'file', language: 'javascriptreact' },
-    ],
+    // Options to control the language client
+    const clientOptions: LanguageClientOptions = {
+      markdown: {
+        isTrusted: true,
+      },
+      documentSelector: [
+        { scheme: 'file', language: 'javascript' },
+        { scheme: 'file', language: 'typescript' },
+        { scheme: 'file', language: 'typescriptreact' },
+        { scheme: 'file', language: 'javascriptreact' },
+      ],
 
-    outputChannel: context.lspOutputChannel,
+      outputChannel: context.lspOutputChannel,
 
-    // Since we use stderr for debug logs, the "Something went wrong" popup
-    // in VSCode shows up a lot. This tells vscode not to show it in any case.
-    revealOutputChannelOn: RevealOutputChannelOn.Never,
+      // Since we use stderr for debug logs, the "Something went wrong" popup
+      // in VSCode shows up a lot. This tells vscode not to show it in any case.
+      revealOutputChannelOn: RevealOutputChannelOn.Never,
 
-    initializationFailedHandler: (error) => {
-      context?.primaryOutputChannel.appendLine(
-        `initializationFailedHandler ${error}`,
-      );
+      initializationFailedHandler: (error) => {
+        context?.primaryOutputChannel.appendLine(
+          `initializationFailedHandler ${error}`,
+        );
 
-      return true;
-    },
+        return true;
+      },
 
-    errorHandler: createErrorHandler(context),
-  };
+      errorHandler: createErrorHandler(context),
+    };
 
-  // Create the language client and start the client.
-  const client = new LanguageClient(
-    'RelayLanguageClient',
-    'Relay Language Client',
-    serverOptions,
-    clientOptions,
-  );
-
-  client.registerFeature(new LSPStatusBarFeature(context));
-
-  context.primaryOutputChannel.appendLine(
-    `Starting the Relay Langauge Server with these options: ${JSON.stringify(
+    // Create the language client and start the client.
+    const client = new LanguageClient(
+      'RelayLanguageClient',
+      'Relay Language Client',
       serverOptions,
-    )}`,
-  );
+      clientOptions,
+    );
 
-  // Start the client. This will also launch the server
-  client.start();
-  context.client = client;
+    client.registerFeature(new LSPStatusBarFeature(context));
+
+    context.primaryOutputChannel.appendLine(
+      `Starting the Relay Langauge Server with these options: ${JSON.stringify(
+        serverOptions,
+        null,
+2,
+      )}`,
+    );
+
+    // Start the client. This will also launch the server
+    client.start();
+    context.client = client;
+  });
 }
 
 type DidNotError = boolean;

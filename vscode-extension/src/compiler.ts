@@ -22,20 +22,20 @@ export function createAndStartCompiler(context: RelayExtensionContext) {
     args.push(config.pathToConfig);
   }
 
-  const terminal = window.createTerminal({
-    name: 'Relay Compiler',
-    cwd: context.relayBinaryExecutionOptions.rootPath,
-  });
+  // const terminal = window.createTerminal({
+  //   name: 'Relay Compiler',
+  //   cwd: context.relayBinaryExecutionOptions.rootPath,
+  // });
 
-  terminal.sendText(
-    `${context.relayBinaryExecutionOptions.binaryPath} ${args.join(' ')}`,
-  );
+  // terminal.sendText(
+  //   `${context.relayBinaryExecutionOptions.binaryPath} ${args.join(' ')}`,
+  // );
 
-  terminal.show();
+  // terminal.show();
 
-  context.extensionContext.subscriptions.push(terminal);
+  // context.extensionContext.subscriptions.push(terminal);
 
-  context.compilerTerminal = terminal;
+  // context.compilerTerminal = terminal;
 }
 
 type DidNotError = boolean;
