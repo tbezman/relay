@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 import type {RelayMockEnvironment} from '../../../relay-test-utils/RelayModernMockEnvironment';
@@ -72,10 +70,10 @@ beforeEach(() => {
   function Renderer({
     initialDataIDs,
     initialCallback,
-  }: {|
+  }: {
     initialCallback: JestMockFn<Array<mixed>, void>,
     initialDataIDs: Array<string>,
-  |}) {
+  }) {
     const [dataIDs, _setDataIDs] = useState(initialDataIDs);
     const [cbState, _setCallback] = useState({callback: initialCallback});
     const cb = cbState.callback;
@@ -92,11 +90,11 @@ beforeEach(() => {
     return null;
   }
 
-  function Container(props: {|
+  function Container(props: {
     callback: JestMockFn<Array<mixed>, void>,
     dataIDs: Array<string>,
     environment: RelayMockEnvironment,
-  |}) {
+  }) {
     const [env, setEnv] = useState(props.environment);
     setEnvironment = setEnv;
     return (

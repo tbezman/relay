@@ -6,9 +6,8 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -29,7 +28,7 @@ export type ObserverOrCallback = Observer<void> | ((error: ?Error) => mixed);
 // RelayRefetchProp to flow into a RelayProp.
 export type RelayProp = {+environment: IEnvironment, ...};
 
-export type RelayPaginationProp = {|
+export type RelayPaginationProp = {
   +environment: IEnvironment,
   +hasMore: () => boolean,
   +isLoading: () => boolean,
@@ -43,9 +42,9 @@ export type RelayPaginationProp = {|
     observerOrCallback: ?ObserverOrCallback,
     refetchVariables: ?Variables,
   ) => ?Disposable,
-|};
+};
 
-export type RelayRefetchProp = {|
+export type RelayRefetchProp = {
   +environment: IEnvironment,
   +refetch: (
     refetchVariables: Variables | ((fragmentVariables: Variables) => Variables),
@@ -53,13 +52,13 @@ export type RelayRefetchProp = {|
     observerOrCallback: ?ObserverOrCallback,
     options?: RefetchOptions,
   ) => Disposable,
-|};
+};
 
-export type RefetchOptions = {|
+export type RefetchOptions = {
   +force?: boolean,
   +fetchPolicy?: 'store-or-network' | 'network-only',
   +metadata?: {[key: string]: mixed, ...},
-|};
+};
 
 /**
  * A utility type which takes the type of a fragment's data (typically found in
@@ -103,6 +102,7 @@ export type $FragmentRef<T> = {
  * `props.relay` and returns the props of the container.
  */
 // prettier-ignore
+// $FlowFixMe[speculation-ambiguous]
 export type $RelayProps<Props, RelayPropT = RelayProp> = $ObjMap<
   $Diff<Props, { relay: RelayPropT | void, ... }>,
   & (<T: { +$fragmentType: empty, ... }>( T) =>  T)

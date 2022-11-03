@@ -6,9 +6,8 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 

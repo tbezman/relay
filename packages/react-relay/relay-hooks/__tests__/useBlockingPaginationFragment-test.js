@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -68,11 +66,11 @@ describe('useBlockingPaginationFragment', () => {
   let Renderer;
 
   class ErrorBoundary extends React.Component<any, any> {
-    state = {error: null};
+    state: any | {error: null} = {error: null};
     componentDidCatch(error: Error) {
       this.setState({error});
     }
-    render() {
+    render(): any | React.Node {
       const {children, fallback} = this.props;
       const {error} = this.state;
       if (error) {
@@ -87,7 +85,7 @@ describe('useBlockingPaginationFragment', () => {
     fragmentRef: mixed,
   ) {
     // $FlowFixMe[incompatible-call]
-    const {data, ...result} = useBlockingPaginationFragmentOriginal(
+    const {data, ...result} = useBlockingPaginationFragmentOriginal<any, mixed>(
       fragmentNode,
       // $FlowFixMe[incompatible-call]
       // $FlowFixMe[prop-missing]
@@ -100,7 +98,7 @@ describe('useBlockingPaginationFragment', () => {
   }
 
   function assertCall(
-    expected: {|data: any, hasNext: boolean, hasPrevious: boolean|},
+    expected: {data: any, hasNext: boolean, hasPrevious: boolean},
     idx: number,
   ) {
     const actualData = renderSpy.mock.calls[idx][0];
@@ -114,11 +112,11 @@ describe('useBlockingPaginationFragment', () => {
   }
 
   function expectFragmentResults(
-    expectedCalls: $ReadOnlyArray<{|
+    expectedCalls: $ReadOnlyArray<{
       data: $FlowFixMe,
       hasNext: boolean,
       hasPrevious: boolean,
-    |}>,
+    }>,
   ) {
     // This ensures that useEffect runs
     TestRenderer.act(() => jest.runAllImmediates());
@@ -387,7 +385,7 @@ describe('useBlockingPaginationFragment', () => {
     });
 
     // Set up renderers
-    Renderer = (props: {|user: any|}) => null;
+    Renderer = (props: {user: any}) => null;
 
     const Container = (props: {
       userRef?: {...},
@@ -414,7 +412,7 @@ describe('useBlockingPaginationFragment', () => {
       return <Renderer user={userData} />;
     };
 
-    const ContextProvider = ({children}: {|children: React.Node|}) => {
+    const ContextProvider = ({children}: {children: React.Node}) => {
       const [env, _setEnv] = useState(environment);
       const relayContext = useMemo(() => ({environment: env}), [env]);
 
@@ -743,13 +741,13 @@ describe('useBlockingPaginationFragment', () => {
     function expectFragmentIsLoadingMore(
       renderer: any,
       direction: Direction,
-      expected: {|
+      expected: {
         data: mixed,
         hasNext: boolean,
         hasPrevious: boolean,
         paginationVariables: Variables,
         gqlPaginationQuery?: $FlowFixMe,
-      |},
+      },
     ) {
       expect(renderSpy).toBeCalledTimes(0);
       renderSpy.mockClear();
@@ -1657,7 +1655,7 @@ describe('useBlockingPaginationFragment', () => {
         const useLoadMoreFunction = require('../useLoadMoreFunction');
         // $FlowFixMe[prop-missing]
         useLoadMoreFunction.mockImplementation((...args) =>
-          jest.requireActual('../useLoadMoreFunction')(...args),
+          jest.requireActual<any>('../useLoadMoreFunction')(...args),
         );
 
         const callback = jest.fn();
@@ -3747,14 +3745,14 @@ describe('useBlockingPaginationFragment', () => {
 
       function expectFragmentIsRefetching(
         renderer: any,
-        expected: {|
+        expected: {
           data: mixed,
           hasNext: boolean,
           hasPrevious: boolean,
           refetchVariables: Variables,
           refetchQuery?: OperationDescriptor,
           gqlRefetchQuery?: $FlowFixMe,
-        |},
+        },
       ) {
         expect(renderSpy).toBeCalledTimes(0);
         renderSpy.mockClear();

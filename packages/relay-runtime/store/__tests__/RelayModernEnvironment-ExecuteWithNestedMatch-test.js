@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -43,13 +41,13 @@ const {
 disallowWarnings();
 
 describe('execute() a query with nested @match', () => {
-  let callbacks: {|
+  let callbacks: {
     +complete: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
     +error: JestMockFn<$ReadOnlyArray<Error>, mixed>,
     +next: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
     +start?: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
     +unsubscribe?: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
-  |};
+  };
   let complete;
   let dataSource;
   let environment;
@@ -60,10 +58,10 @@ describe('execute() a query with nested @match', () => {
   let next;
   let operation;
   let operationCallback;
-  let operationLoader: {|
+  let operationLoader: {
     get: (reference: mixed) => ?NormalizationRootNode,
     load: JestMockFn<$ReadOnlyArray<mixed>, Promise<?NormalizationRootNode>>,
-  |};
+  };
   let plaintextRendererFragment;
   let plaintextRendererNormalizationFragment;
   let query;

@@ -6,9 +6,8 @@
  *
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -348,6 +347,7 @@ function createContainerWithFragments<
     createGetFragmentVariables(metadata);
 
   return class extends React.Component<$FlowFixMeProps, ContainerState> {
+    // $FlowFixMe[missing-local-annot]
     static displayName = containerName;
 
     _isARequestInFlight: boolean;
@@ -566,6 +566,7 @@ function createContainerWithFragments<
       ...
     } {
       // Extract connection data and verify there are more edges to fetch
+      // eslint-disable-next-line no-unused-vars
       const {componentRef: _, ...restProps} = this.props;
       const props = {
         ...restProps,
@@ -696,7 +697,7 @@ function createContainerWithFragments<
       const observer = toObserver(observerOrCallback);
       const connectionData = this._getConnectionData();
       if (!connectionData) {
-        Observable.create(sink => sink.complete()).subscribe(observer);
+        Observable.create<empty>(sink => sink.complete()).subscribe(observer);
         return null;
       }
       const totalCount = connectionData.edgeCount + pageSize;
@@ -757,8 +758,11 @@ function createContainerWithFragments<
     ): Subscription {
       const {environment} = assertRelayContext(this.props.__relayContext);
       const {
+        // eslint-disable-next-line no-unused-vars
         componentRef: _,
+        // eslint-disable-next-line no-unused-vars
         __relayContext,
+        // eslint-disable-next-line no-unused-vars
         __rootIsQueryRenderer,
         ...restProps
       } = this.props;
@@ -904,7 +908,9 @@ function createContainerWithFragments<
       }
     }
 
+    // $FlowFixMe[missing-local-annot]
     render() {
+      // eslint-disable-next-line no-unused-vars
       const {componentRef, __relayContext, __rootIsQueryRenderer, ...props} =
         this.props;
       return (

@@ -6,9 +6,8 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -30,7 +29,7 @@ export type PageInfo = {
   ...
 };
 
-type ConnectionConfig = {|
+type ConnectionConfig = {
   CURSOR: string,
   EDGES: string,
   END_CURSOR: string,
@@ -40,7 +39,7 @@ type ConnectionConfig = {|
   PAGE_INFO: string,
   PAGE_INFO_TYPE: string,
   START_CURSOR: string,
-|};
+};
 
 const CONNECTION_CALLS = {
   after: true,

@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -21,12 +19,12 @@ const invariant = require('invariant');
 function getRefetchMetadata(
   fragmentNode: ReaderFragment,
   componentDisplayName: string,
-): {|
+): {
   fragmentRefPathInResponse: $ReadOnlyArray<string | number>,
   identifierField: ?string,
   refetchableRequest: ConcreteRequest,
   refetchMetadata: ReaderRefetchMetadata,
-|} {
+} {
   invariant(
     fragmentNode.metadata?.plural !== true,
     'Relay: getRefetchMetadata(): Expected fragment `%s` not to be plural when using ' +

@@ -5,11 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict-local
- * @emails oncall+relay
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -46,13 +44,13 @@ const {
 export type FragmentResource = FragmentResourceImpl;
 
 type FragmentResourceCache = Cache<
-  | {|
+  | {
       kind: 'pending',
       pendingOperations: $ReadOnlyArray<RequestDescriptor>,
       promise: Promise<mixed>,
       result: FragmentResult,
-    |}
-  | {|kind: 'done', result: FragmentResult|},
+    }
+  | {kind: 'done', result: FragmentResult},
 >;
 
 const WEAKMAP_SUPPORTED = typeof WeakMap === 'function';
@@ -63,13 +61,13 @@ interface IMap<K, V> {
 
 type SingularOrPluralSnapshot = Snapshot | $ReadOnlyArray<Snapshot>;
 
-opaque type FragmentResult: {data: mixed, ...} = {|
+opaque type FragmentResult: {data: mixed, ...} = {
   cacheKey: string,
   data: mixed,
   isMissingData: boolean,
   snapshot: SingularOrPluralSnapshot | null,
   storeEpoch: number,
-|};
+};
 
 // TODO: Fix to not rely on LRU. If the number of active fragments exceeds this
 // capacity, readSpec() will fail to find cached entries and break object
@@ -77,7 +75,7 @@ opaque type FragmentResult: {data: mixed, ...} = {|
 const CACHE_CAPACITY = 1000000;
 
 // this is frozen so that users don't accidentally push data into the array
-const CONSTANT_READONLY_EMPTY_ARRAY = Object.freeze([]);
+const CONSTANT_READONLY_EMPTY_ARRAY: Array<$FlowFixMe> = Object.freeze([]);
 
 function isMissingData(snapshot: SingularOrPluralSnapshot): boolean {
   if (Array.isArray(snapshot)) {
@@ -178,7 +176,7 @@ class ClientEdgeQueryResultsCache {
     }
   }
 
-  _retain(id: string) {
+  _retain(id: string): {dispose: () => void} {
     const retainCount = (this._retainCounts.get(id) ?? 0) + 1;
     this._retainCounts.set(id, retainCount);
     return {
@@ -307,6 +305,7 @@ class FragmentResourceImpl {
         !missingLiveResolverFields(cachedValue.result.snapshot)?.length
       ) {
         this._handlePotentialSnapshotErrorsInSnapshot(
+          // $FlowFixMe[incompatible-call]
           cachedValue.result.snapshot,
         );
         return cachedValue.result;
@@ -481,7 +480,7 @@ class FragmentResourceImpl {
     fragmentRef: mixed,
     request: ConcreteRequest,
     clientEdgeDestinationID: DataID,
-  ) {
+  ): {queryResult: QueryResult, requestDescriptor: RequestDescriptor} {
     const originalVariables = getVariablesFromFragment(
       fragmentNode,
       fragmentRef,
@@ -716,10 +715,10 @@ class FragmentResourceImpl {
     fragmentNode: ReaderFragment,
     fragmentOwner: RequestDescriptor,
     fragmentResult: FragmentResult,
-  ): {|
+  ): {
     promise: Promise<void>,
     pendingOperations: $ReadOnlyArray<RequestDescriptor>,
-  |} | null {
+  } | null {
     const pendingOperationsResult = getPendingOperationsForFragment(
       this._environment,
       fragmentNode,

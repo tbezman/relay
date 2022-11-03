@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @format
+ * @oncall relay
  */
 
 'use strict';
 
-const {fbContent} = require('internaldocs-fb-helpers');
+const {fbContent} = require('docusaurus-plugin-internaldocs-fb/internal');
 
 const Guides = fbContent({
   internal: [
@@ -165,6 +166,7 @@ module.exports = {
             'api-reference/hooks/use-query-loader',
             'api-reference/hooks/load-query',
             'api-reference/hooks/use-lazy-load-query',
+            'api-reference/hooks/use-client-query',
             'api-reference/hooks/use-fragment',
             'api-reference/hooks/use-refetchable-fragment',
             'api-reference/hooks/use-pagination-fragment',
@@ -230,6 +232,7 @@ module.exports = {
         'principles-and-architecture/runtime-architecture',
         'principles-and-architecture/videos',
       ],
+      'Error reference': ['error-reference/unknown-field'],
     },
     'editor-support',
     'community/learning-resources',

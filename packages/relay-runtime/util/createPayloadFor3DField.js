@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -22,6 +20,7 @@ const {
 } = require('../store/RelayStoreUtils');
 
 export opaque type Local3DPayload<
+  // eslint-disable-next-line no-unused-vars
   +DocumentName: string,
   +Response: {...},
 > = Response;

@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow strict-local
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 import type {
@@ -53,7 +51,7 @@ describe('execute() fetches a @stream-ed @connection', () => {
   let selector;
   let source;
   let store;
-  let variables: {|after: ?string, enableStream: boolean|};
+  let variables: {after: ?string, enableStream: boolean};
 
   beforeEach(() => {
     query = graphql`
@@ -127,7 +125,7 @@ describe('execute() fetches a @stream-ed @connection', () => {
       _variables: Variables,
       _cacheConfig: CacheConfig,
     ) => {
-      return RelayObservable.create(sink => {
+      return RelayObservable.create<$FlowFixMe>(sink => {
         dataSource = sink;
       });
     };

@@ -6,9 +6,8 @@
  *
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -33,7 +32,7 @@ const validateMutation = require('./validateMutation');
 const invariant = require('invariant');
 const warning = require('warning');
 
-export type MutationConfig<TMutation: MutationParameters> = {|
+export type MutationConfig<TMutation: MutationParameters> = {
   cacheConfig?: CacheConfig,
   configs?: Array<DeclarativeMutationConfig>,
   mutation: GraphQLTaggedNode,
@@ -53,7 +52,7 @@ export type MutationConfig<TMutation: MutationParameters> = {|
   updater?: ?SelectorStoreUpdater<TMutation['response']>,
   uploadables?: UploadableMap,
   variables: TMutation['variables'],
-|};
+};
 
 /**
  * Higher-level helper function to execute a mutation against a specific
@@ -106,7 +105,7 @@ function commitMutation<TMutation: MutationParameters>(
       updater,
     ));
   }
-  const errors = [];
+  const errors: Array<PayloadError> = [];
   const subscription = environment
     .executeMutation({
       operation,

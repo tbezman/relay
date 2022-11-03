@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow strict-local
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -33,7 +31,7 @@ const {readFragment} = require('relay-runtime/store/ResolverFragments');
  * A Relay Resolver that returns an object implementing the External State
  * Resolver interface.
  */
-function CounterSuspendsWhenOdd(
+function counter_suspends_when_odd(
   rootKey: CounterSuspendsWhenOdd$key,
 ): LiveState<number> {
   readFragment(
@@ -63,4 +61,6 @@ function CounterSuspendsWhenOdd(
   };
 }
 
-module.exports = CounterSuspendsWhenOdd;
+module.exports = {
+  counter_suspends_when_odd,
+};

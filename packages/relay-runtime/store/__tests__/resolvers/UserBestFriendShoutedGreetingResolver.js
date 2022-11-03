@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow strict-local
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -24,7 +22,7 @@ const {readFragment} = require('relay-runtime/store/ResolverFragments');
  * @rootFragment UserBestFriendShoutedGreetingResolver
  * @onType User
  */
-function userBestFriendShoutedGreeting(
+function best_friend_shouted_greeting(
   rootKey: UserBestFriendShoutedGreetingResolver$key,
 ): string {
   const user = readFragment(
@@ -46,4 +44,6 @@ function userBestFriendShoutedGreeting(
   return greeting.toUpperCase();
 }
 
-module.exports = userBestFriendShoutedGreeting;
+module.exports = {
+  best_friend_shouted_greeting,
+};

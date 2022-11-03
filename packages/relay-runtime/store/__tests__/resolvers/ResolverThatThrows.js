@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow strict-local
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -28,7 +26,9 @@ const {readFragment} = require('relay-runtime/store/ResolverFragments');
  *
  * This should always throw.
  */
-function ResolverThatThrows(rootKey: ResolverThatThrows$key): LiveState<null> {
+function resolver_that_throws(
+  rootKey: ResolverThatThrows$key,
+): LiveState<null> {
   readFragment(
     graphql`
       fragment ResolverThatThrows on User {
@@ -50,4 +50,6 @@ function ResolverThatThrows(rootKey: ResolverThatThrows$key): LiveState<null> {
   };
 }
 
-module.exports = ResolverThatThrows;
+module.exports = {
+  resolver_that_throws,
+};

@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow strict-local
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -82,7 +80,6 @@ const updatedResponse = {
 
 const variables = {id: '4'};
 let sink;
-let observable;
 let fetch;
 let environment;
 let store;
@@ -95,7 +92,6 @@ let writeDataToStore;
 
 beforeEach(() => {
   operation = createOperationDescriptor(query, variables);
-  observable = undefined;
   fetch = jest.fn((_query, _variables, _cacheConfig) => {
     const observableCreate = Observable.create(_sink => {
       sink = _sink;

@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow strict-local
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -26,7 +24,7 @@ const {readFragment} = require('relay-runtime/store/ResolverFragments');
  * @edgeTo User
  * @onType User
  */
-function UserClientEdgeResolver(rootKey: UserClientEdgeResolver$key): DataID {
+function client_edge(rootKey: UserClientEdgeResolver$key): DataID {
   readFragment(
     graphql`
       fragment UserClientEdgeResolver on User {
@@ -38,4 +36,6 @@ function UserClientEdgeResolver(rootKey: UserClientEdgeResolver$key): DataID {
   return '1337';
 }
 
-module.exports = UserClientEdgeResolver;
+module.exports = {
+  client_edge,
+};

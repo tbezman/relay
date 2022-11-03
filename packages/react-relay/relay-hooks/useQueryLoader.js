@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -35,10 +33,10 @@ export type LoaderFn<TQuery: OperationType> = (
   options?: UseQueryLoaderLoadQueryOptions,
 ) => void;
 
-export type UseQueryLoaderLoadQueryOptions = $ReadOnly<{|
+export type UseQueryLoaderLoadQueryOptions = $ReadOnly<{
   ...LoadQueryOptions,
   +__environment?: ?IEnvironment,
-|}>;
+}>;
 
 type UseQueryLoaderHookReturnType<TQuery: OperationType> = [
   ?PreloadedQuery<TQuery>,
@@ -49,9 +47,9 @@ type UseQueryLoaderHookReturnType<TQuery: OperationType> = [
 // NullQueryReference needs to implement referential equality,
 // so that multiple NullQueryReferences can be in the same set
 // (corresponding to multiple calls to disposeQuery).
-type NullQueryReference = {|
+type NullQueryReference = {
   kind: 'NullQueryReference',
-|};
+};
 const initialNullQueryReferenceState = {kind: 'NullQueryReference'};
 
 function requestIsLiveQuery<TQuery: OperationType>(

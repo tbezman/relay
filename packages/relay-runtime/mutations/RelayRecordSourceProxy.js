@@ -6,14 +6,12 @@
  *
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
 import type {HandlerProvider} from '../handlers/RelayDefaultHandlerProvider';
-import type {GraphQLTaggedNode} from '../query/GraphQLTag';
 import type {GetDataID} from '../store/RelayResponseNormalizer';
 import type {
   DataIDSet,
@@ -24,6 +22,7 @@ import type {
   RecordSource,
   RecordSourceProxy,
   UpdatableData,
+  MissingFieldHandler,
 } from '../store/RelayStoreTypes';
 import type {
   DataID,
@@ -57,11 +56,13 @@ class RelayRecordSourceProxy implements RecordSourceProxy {
   _getDataID: GetDataID;
   _invalidatedStore: boolean;
   _idsMarkedForInvalidation: DataIDSet;
+  _missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>;
 
   constructor(
     mutator: RelayRecordSourceMutator,
     getDataID: GetDataID,
     handlerProvider?: ?HandlerProvider,
+    missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>,
   ) {
     this.__mutator = mutator;
     this._handlerProvider = handlerProvider || null;
@@ -69,6 +70,7 @@ class RelayRecordSourceProxy implements RecordSourceProxy {
     this._getDataID = getDataID;
     this._invalidatedStore = false;
     this._idsMarkedForInvalidation = new Set();
+    this._missingFieldHandlers = missingFieldHandlers;
   }
 
   publishSource(
@@ -178,7 +180,12 @@ class RelayRecordSourceProxy implements RecordSourceProxy {
     query: UpdatableQuery<TVariables, TData>,
     variables: TVariables,
   ): UpdatableData<TData> {
-    return readUpdatableQuery_EXPERIMENTAL(query, variables, this);
+    return readUpdatableQuery_EXPERIMENTAL(
+      query,
+      variables,
+      this,
+      this._missingFieldHandlers,
+    );
   }
 
   readUpdatableFragment_EXPERIMENTAL<TFragmentType: FragmentType, TData>(
@@ -189,6 +196,7 @@ class RelayRecordSourceProxy implements RecordSourceProxy {
       fragment,
       fragmentReference,
       this,
+      this._missingFieldHandlers,
     );
   }
 }

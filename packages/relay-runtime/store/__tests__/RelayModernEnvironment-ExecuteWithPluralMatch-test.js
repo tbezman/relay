@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -51,10 +49,10 @@ describe('execute() a query with plural @match', () => {
   let next;
   let operation;
   let operationCallback;
-  let operationLoader: {|
+  let operationLoader: {
     get: (reference: mixed) => ?NormalizationRootNode,
     load: JestMockFn<$ReadOnlyArray<mixed>, Promise<?NormalizationRootNode>>,
-  |};
+  };
   let query;
   let resolveFragment;
   let source;

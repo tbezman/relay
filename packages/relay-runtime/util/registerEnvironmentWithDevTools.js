@@ -6,10 +6,8 @@
  *
  * @flow strict-local
  * @format
- * @emails oncall+relay
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 

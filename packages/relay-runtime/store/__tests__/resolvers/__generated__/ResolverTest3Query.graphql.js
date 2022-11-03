@@ -4,7 +4,9 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<57a1a362a54386d52a11c2ed2404a38e>>
+ * @oncall relay
+ *
+ * @generated SignedSource<<a89375bc921d4ef55a1925ddd7b1c214>>
  * @flow
  * @lightSyntaxTransform
  * @nogrep
@@ -16,6 +18,13 @@
 
 /*::
 import type { ConcreteRequest, Query } from 'relay-runtime';
+import type { UserClientEdgeResolver$key } from "./UserClientEdgeResolver.graphql";
+import {client_edge as userClientEdgeResolver} from "../UserClientEdgeResolver.js";
+// Type assertion validating that `userClientEdgeResolver` resolver is correctly implemented.
+// A type error here indicates that the type signature of the resolver module is incorrect.
+(userClientEdgeResolver: (
+  rootKey: UserClientEdgeResolver$key, 
+) => mixed);
 export type ResolverTest3Query$variables = {||};
 export type ResolverTest3Query$data = {|
   +me: ?{|
@@ -60,7 +69,7 @@ var node/*: ConcreteRequest*/ = {
               },
               "kind": "RelayResolver",
               "name": "client_edge",
-              "resolverModule": require('./../UserClientEdgeResolver.js'),
+              "resolverModule": require('./../UserClientEdgeResolver').client_edge,
               "path": "me.client_edge"
             },
             "linkedField": {
@@ -104,10 +113,23 @@ var node/*: ConcreteRequest*/ = {
         "plural": false,
         "selections": [
           {
-            "alias": null,
+            "name": "client_edge",
             "args": null,
-            "kind": "ScalarField",
-            "name": "name",
+            "fragment": {
+              "kind": "InlineFragment",
+              "selections": [
+                {
+                  "alias": null,
+                  "args": null,
+                  "kind": "ScalarField",
+                  "name": "name",
+                  "storageKey": null
+                }
+              ],
+              "type": "User",
+              "abstractKey": null
+            },
+            "kind": "RelayResolver",
             "storageKey": null
           },
           {

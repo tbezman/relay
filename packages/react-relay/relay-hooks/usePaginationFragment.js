@@ -4,14 +4,15 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
 
-// flowlint ambiguous-object-type:error
-
 'use strict';
+
+import type {VariablesOf} from 'relay-runtime/util/RelayRuntimeTypes';
+import type {Options} from './useRefetchableFragmentNode';
 
 import type {LoadMoreFn, UseLoadMoreFunctionArgs} from './useLoadMoreFunction';
 import type {RefetchFnDynamic} from './useRefetchableFragmentNode';
@@ -23,6 +24,7 @@ import type {
   OperationType,
 } from 'relay-runtime';
 
+const HooksImplementation = require('./HooksImplementation');
 const useLoadMoreFunction = require('./useLoadMoreFunction');
 const useRefetchableFragmentNode = require('./useRefetchableFragmentNode');
 const useStaticFragmentNodeWarning = require('./useStaticFragmentNodeWarning');
@@ -33,8 +35,16 @@ const {
   getPaginationMetadata,
 } = require('relay-runtime');
 
-export type ReturnType<TQuery: OperationType, TKey, TFragmentData> = {|
-  data: TFragmentData,
+export type ReturnType<TQuery: OperationType, TKey> = {
+  // NOTE: This $Call ensures that the type of the returned data is either:
+  //   - nullable if the provided ref type is nullable
+  //   - non-nullable if the provided ref type is non-nullable
+  // prettier-ignore
+  data: $Call<
+    & (<TFragmentData>( { +$data?: TFragmentData, ... }) =>  TFragmentData)
+    & (<TFragmentData>(?{ +$data?: TFragmentData, ... }) => ?TFragmentData),
+    TKey,
+  >,
   loadNext: LoadMoreFn<TQuery>,
   loadPrevious: LoadMoreFn<TQuery>,
   hasNext: boolean,
@@ -42,27 +52,26 @@ export type ReturnType<TQuery: OperationType, TKey, TFragmentData> = {|
   isLoadingNext: boolean,
   isLoadingPrevious: boolean,
   refetch: RefetchFnDynamic<TQuery, TKey>,
-|};
+};
 
-function usePaginationFragment<
+// This separate type export is only needed as long as we are injecting
+// a separate hooks implementation in ./HooksImplementation -- it can
+// be removed after we stop doing that.
+export type UsePaginationFragmentType = <
   TQuery: OperationType,
   TKey: ?{+$data?: mixed, +$fragmentSpreads: FragmentType, ...},
 >(
   fragmentInput: GraphQLTaggedNode,
   parentFragmentRef: TKey,
-): ReturnType<
-  TQuery,
-  TKey,
-  // NOTE: This $Call ensures that the type of the returned data is either:
-  //   - nullable if the provided ref type is nullable
-  //   - non-nullable if the provided ref type is non-nullable
-  // prettier-ignore
-  $Call<
-    & (<TFragmentData>( { +$data?: TFragmentData, ... }) =>  TFragmentData)
-    & (<TFragmentData>(?{ +$data?: TFragmentData, ... }) => ?TFragmentData),
-    TKey,
-  >,
-> {
+) => ReturnType<TQuery, TKey>;
+
+function usePaginationFragment_LEGACY<
+  TQuery: OperationType,
+  TKey: ?{+$data?: mixed, +$fragmentSpreads: FragmentType, ...},
+>(
+  fragmentInput: GraphQLTaggedNode,
+  parentFragmentRef: TKey,
+): ReturnType<TQuery, TKey> {
   const fragmentNode = getFragment(fragmentInput);
   useStaticFragmentNodeWarning(
     fragmentNode,
@@ -114,7 +123,7 @@ function usePaginationFragment<
     });
 
   const refetchPagination: RefetchFnDynamic<TQuery, TKey> = useCallback(
-    (variables, options) => {
+    (variables: VariablesOf<TQuery>, options: void | Options) => {
       disposeFetchNext();
       disposeFetchPrevious();
       return refetch(variables, {...options, __environment: undefined});
@@ -168,6 +177,25 @@ function useLoadMore<TQuery: OperationType>(
     onReset: handleReset,
   });
   return [loadMore, hasMore, isLoadingMore, disposeFetch];
+}
+
+function usePaginationFragment<
+  TQuery: OperationType,
+  TKey: ?{+$data?: mixed, +$fragmentSpreads: FragmentType, ...},
+>(
+  fragmentInput: GraphQLTaggedNode,
+  parentFragmentRef: TKey,
+): ReturnType<TQuery, TKey> {
+  const impl = HooksImplementation.get();
+  if (impl) {
+    return impl.usePaginationFragment<TQuery, TKey>(
+      fragmentInput,
+      parentFragmentRef,
+    );
+  } else {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return usePaginationFragment_LEGACY(fragmentInput, parentFragmentRef);
+  }
 }
 
 module.exports = usePaginationFragment;

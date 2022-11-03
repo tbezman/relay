@@ -6,9 +6,8 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -35,7 +34,7 @@ import type {ResolverCache} from './ResolverCache';
 
 const {
   INTERNAL_ACTOR_IDENTIFIER_DO_NOT_USE,
-  assertInternalActorIndentifier,
+  assertInternalActorIdentifier,
 } = require('../multi-actor-environment/ActorIdentifier');
 const deepFreeze = require('../util/deepFreeze');
 const RelayFeatureFlags = require('../util/RelayFeatureFlags');
@@ -53,15 +52,15 @@ const {ROOT_ID, ROOT_TYPE} = require('./RelayStoreUtils');
 const {RecordResolverCache} = require('./ResolverCache');
 const invariant = require('invariant');
 
-export opaque type InvalidationState = {|
+export opaque type InvalidationState = {
   dataIDs: $ReadOnlyArray<DataID>,
   invalidations: Map<DataID, ?number>,
-|};
+};
 
-type InvalidationSubscription = {|
+type InvalidationSubscription = {
   callback: () => void,
   invalidationState: InvalidationState,
-|};
+};
 
 const DEFAULT_RELEASE_BUFFER_SIZE = 10;
 
@@ -96,12 +95,12 @@ class RelayModernStore implements Store {
   _releaseBuffer: Array<string>;
   _roots: Map<
     string,
-    {|
+    {
       operation: OperationDescriptor,
       refCount: number,
       epoch: ?number,
       fetchTime: ?number,
-    |},
+    },
   >;
   _shouldScheduleGC: boolean;
   _storeSubscriptions: StoreSubscriptions;
@@ -110,7 +109,7 @@ class RelayModernStore implements Store {
 
   constructor(
     source: MutableRecordSource,
-    options?: {|
+    options?: {
       gcScheduler?: ?Scheduler,
       log?: ?LogFunction,
       operationLoader?: ?OperationLoader,
@@ -118,7 +117,7 @@ class RelayModernStore implements Store {
       gcReleaseBufferSize?: ?number,
       queryCacheExpirationTime?: ?number,
       shouldProcessClientComponents?: ?boolean,
-    |},
+    },
   ) {
     // Prevent mutation of a record from outside the store.
     if (__DEV__) {
@@ -201,13 +200,13 @@ class RelayModernStore implements Store {
     const getSourceForActor =
       options?.getSourceForActor ??
       (actorIdentifier => {
-        assertInternalActorIndentifier(actorIdentifier);
+        assertInternalActorIdentifier(actorIdentifier);
         return source;
       });
     const getTargetForActor =
       options?.getTargetForActor ??
       (actorIdentifier => {
-        assertInternalActorIndentifier(actorIdentifier);
+        assertInternalActorIdentifier(actorIdentifier);
         return source;
       });
 
@@ -334,7 +333,7 @@ class RelayModernStore implements Store {
       this._resolverCache.invalidateDataIDs(this._updatedRecordIDs);
     }
     const source = this.getSource();
-    const updatedOwners = [];
+    const updatedOwners: Array<RequestDescriptor> = [];
     this._storeSubscriptions.updateSubscriptions(
       source,
       this._updatedRecordIDs,
@@ -458,7 +457,7 @@ class RelayModernStore implements Store {
   }
 
   lookupInvalidationState(dataIDs: $ReadOnlyArray<DataID>): InvalidationState {
-    const invalidations = new Map();
+    const invalidations = new Map<DataID, ?number>();
     dataIDs.forEach(dataID => {
       const record = this.getSource().get(dataID);
       invalidations.set(
@@ -603,7 +602,7 @@ class RelayModernStore implements Store {
     /* eslint-disable no-labels */
     top: while (true) {
       const startEpoch = this._currentWriteEpoch;
-      const references = new Set();
+      const references = new Set<DataID>();
 
       // Mark all records that are traversable from a root
       for (const {operation} of this._roots.values()) {

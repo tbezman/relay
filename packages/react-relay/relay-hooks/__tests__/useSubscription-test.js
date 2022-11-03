@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -63,9 +61,9 @@ describe('useSubscription', () => {
     jest.resetAllMocks();
   });
 
-  type Props = {|
+  type Props = {
     env: RelayMockEnvironment,
-  |};
+  };
   function MyComponent({env}: Props) {
     function InnerComponent() {
       useSubscription(config);

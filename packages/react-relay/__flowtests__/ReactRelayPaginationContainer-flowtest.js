@@ -6,9 +6,8 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -33,13 +32,13 @@ class FooComponent extends React.Component {
     requiredProp: string,
     ...
   };
-  static defaultProps = {
+  static defaultProps: {defaultProp: string} = {
     defaultProp: 'default',
   };
   getNum(): number {
     return 42;
   }
-  render() {
+  render(): React.Node {
     const reqLen = this.props.requiredProp.length;
     const optionalProp = this.props.optionalProp;
 
@@ -159,7 +158,7 @@ module.exports = {
         /** $FlowExpectedError: Foo `getNum` gives number, but `getString` assumes string  **/
         return bad ? 'not good' : ok;
       }
-      render() {
+      render(): React.Node {
         return (
           <Foo
             componentRef={ref => {

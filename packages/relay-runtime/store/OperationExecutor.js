@@ -6,10 +6,8 @@
  *
  * @flow strict-local
  * @format
- * @emails oncall+relay
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -77,7 +75,7 @@ const {ROOT_TYPE, TYPENAME_KEY, getStorageKey} = require('./RelayStoreUtils');
 const invariant = require('invariant');
 const warning = require('warning');
 
-export type ExecuteConfig<TMutation: MutationParameters> = {|
+export type ExecuteConfig<TMutation: MutationParameters> = {
   +actorIdentifier: ActorIdentifier,
   +getDataID: GetDataID,
   +getPublishQueue: (actorIdentifier: ActorIdentifier) => PublishQueue,
@@ -97,32 +95,32 @@ export type ExecuteConfig<TMutation: MutationParameters> = {|
   +treatMissingFieldsAsNull: boolean,
   +updater?: ?SelectorStoreUpdater<TMutation['response']>,
   +log: LogFunction,
-|};
+};
 
 export type ActiveState = 'active' | 'inactive';
 
-export type TaskScheduler = {|
+export type TaskScheduler = {
   +cancel: (id: string) => void,
   +schedule: (fn: () => void) => string,
-|};
+};
 
 type Label = string;
 type PathKey = string;
 type IncrementalResults =
-  | {|
+  | {
       +kind: 'placeholder',
       +placeholder: IncrementalDataPlaceholder,
-    |}
-  | {|
+    }
+  | {
       +kind: 'response',
       +responses: Array<IncrementalGraphQLResponse>,
-    |};
+    };
 
-type IncrementalGraphQLResponse = {|
+type IncrementalGraphQLResponse = {
   label: string,
   path: $ReadOnlyArray<mixed>,
   response: GraphQLResponseWithData,
-|};
+};
 
 function execute<TMutation: MutationParameters>(
   config: ExecuteConfig<TMutation>,
@@ -159,7 +157,7 @@ class Executor<TMutation: MutationParameters> {
   _sink: Sink<GraphQLResponse>;
   _source: Map<
     string,
-    {|+record: Record, +fieldPayloads: Array<HandleFieldPayload>|},
+    {+record: Record, +fieldPayloads: Array<HandleFieldPayload>},
   >;
   _state: 'started' | 'loading_incremental' | 'loading_final' | 'completed';
   +_getStore: (actorIdentifier: ActorIdentifier) => Store;
@@ -345,7 +343,7 @@ class Executor<TMutation: MutationParameters> {
     const scheduler = this._scheduler;
     if (scheduler != null) {
       const id = this._nextSubscriptionId++;
-      RelayObservable.create(sink => {
+      RelayObservable.create<empty>(sink => {
         const cancellationToken = scheduler.schedule(() => {
           try {
             task();
@@ -705,7 +703,7 @@ class Executor<TMutation: MutationParameters> {
   _normalizeFollowupPayload(
     followupPayload: FollowupPayload,
     normalizationNode: NormalizationSelectableNode,
-  ) {
+  ): RelayResponsePayload {
     let variables;
     if (
       normalizationNode.kind === 'SplitOperation' &&
@@ -748,7 +746,7 @@ class Executor<TMutation: MutationParameters> {
     moduleImportPayload: ModuleImportPayload,
   ): $ReadOnlyArray<OptimisticUpdate<TMutation>> {
     const operation = getOperation(normalizationRootNode);
-    const optimisticUpdates = [];
+    const optimisticUpdates: Array<OptimisticUpdate<TMutation>> = [];
     const modulePayload = this._normalizeFollowupPayload(
       moduleImportPayload,
       operation,
@@ -958,7 +956,7 @@ class Executor<TMutation: MutationParameters> {
                 .then(resolve, reject);
             }),
           );
-          RelayObservable.create(sink => {
+          RelayObservable.create<empty>(sink => {
             let cancellationToken;
             const subscription = networkObservable.subscribe({
               next: (loadedNode: ?NormalizationRootNode) => {
@@ -1155,7 +1153,7 @@ class Executor<TMutation: MutationParameters> {
         previousParentEntry.record,
         parentRecord,
       );
-      const handlePayloads = new Map();
+      const handlePayloads = new Map<string, HandleFieldPayload>();
       const dedupePayload = (payload: HandleFieldPayload) => {
         const key = stableStringify(payload);
         handlePayloads.set(key, payload);
@@ -1411,14 +1409,14 @@ class Executor<TMutation: MutationParameters> {
     variables: Variables,
     path: $ReadOnlyArray<mixed>,
     normalizationPath: $ReadOnlyArray<string>,
-  ): {|
+  ): {
     fieldPayloads: Array<HandleFieldPayload>,
     itemID: DataID,
     itemIndex: number,
     prevIDs: Array<?DataID>,
     relayPayload: RelayResponsePayload,
     storageKey: string,
-  |} {
+  } {
     const {data} = response;
     invariant(
       typeof data === 'object',
@@ -1571,7 +1569,7 @@ class Executor<TMutation: MutationParameters> {
   _runPublishQueue(
     operation?: OperationDescriptor,
   ): $ReadOnlyArray<RequestDescriptor> {
-    const updatedOwners = new Set();
+    const updatedOwners = new Set<RequestDescriptor>();
     for (const actorIdentifier of this._getActorsToVisit()) {
       const owners = this._getPublishQueue(actorIdentifier).run(operation);
       owners.forEach(owner => updatedOwners.add(owner));

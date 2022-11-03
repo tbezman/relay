@@ -4,14 +4,14 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow strict-local
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
 
-// flowlint ambiguous-object-type:error
-
 'use strict';
+
+import type {SelectorData} from 'relay-runtime/store/RelayStoreTypes';
 import type {Disposable} from '../../util/RelayRuntimeTypes';
 import type {
   RelayModernStoreTest2Fragment$data,
@@ -53,7 +53,7 @@ const {
   simpleClone,
 } = require('relay-test-utils-internal');
 
-function assertIsDeeplyFrozen(value: ?{...} | ?$ReadOnlyArray<{...}>) {
+function assertIsDeeplyFrozen(value: ?{...} | ?$ReadOnlyArray<{...}>): void {
   if (!value) {
     throw new Error(
       'Expected value to be a non-null object or array of objects',
@@ -75,8 +75,10 @@ function cloneEventWithSets(event: LogEvent) {
     if (event.hasOwnProperty(key)) {
       const val = event[key];
       if (val instanceof Set) {
+        // $FlowFixMe[prop-missing]
         nextEvent[key] = new Set(val);
       } else {
+        // $FlowFixMe[prop-missing]
         nextEvent[key] = val;
       }
     }
@@ -290,7 +292,7 @@ function cloneEventWithSets(event: LogEvent) {
       });
 
       it('includes fragment owner in selector data when owner is provided', () => {
-        UserQuery = graphql`
+        const CustomUserQuery = graphql`
           query RelayModernStoreTest3Query($size: [Int]) {
             me {
               ...RelayModernStoreTest3Fragment
@@ -298,7 +300,7 @@ function cloneEventWithSets(event: LogEvent) {
           }
         `;
 
-        UserFragment = graphql`
+        const CustomUserFragment = graphql`
           fragment RelayModernStoreTest3Fragment on User {
             name
             profilePicture(size: $size) {
@@ -313,9 +315,9 @@ function cloneEventWithSets(event: LogEvent) {
           }
         `;
 
-        const owner = createOperationDescriptor(UserQuery, {size: 32});
+        const owner = createOperationDescriptor(CustomUserQuery, {size: 32});
         const selector = createReaderSelector(
-          UserFragment,
+          CustomUserFragment,
           '4',
           {size: 32},
           owner.request,
@@ -440,7 +442,9 @@ function cloneEventWithSets(event: LogEvent) {
             me: {__ref: '4'},
           },
         };
-        logEvents = [];
+        logEvents = ([]: Array<
+          $FlowFixMe | {...} | {data: ?SelectorData, kind: string},
+        >);
         source = getRecordSourceImplementation(data);
         store = new RelayModernStore(source, {
           log: event => {
@@ -505,14 +509,14 @@ function cloneEventWithSets(event: LogEvent) {
 
       it('calls subscribers and reads data with fragment owner if one is available in subscription snapshot', () => {
         // subscribe(), publish(), notify() -> subscriber called
-        UserQuery = graphql`
+        const CustomUserQuery = graphql`
           query RelayModernStoreTest5Query($size: [Int]) {
             me {
               ...RelayModernStoreTest6Fragment
             }
           }
         `;
-        UserFragment = graphql`
+        const CustomUserFragment = graphql`
           fragment RelayModernStoreTest6Fragment on User {
             name
             profilePicture(size: $size) {
@@ -521,9 +525,9 @@ function cloneEventWithSets(event: LogEvent) {
             emailAddresses
           }
         `;
-        const owner = createOperationDescriptor(UserQuery, {size: 32});
+        const owner = createOperationDescriptor(CustomUserQuery, {size: 32});
         const selector = createReaderSelector(
-          UserFragment,
+          CustomUserFragment,
           '4',
           {size: 32},
           owner.request,
@@ -2327,7 +2331,7 @@ function cloneEventWithSets(event: LogEvent) {
       }
 
       beforeEach(() => {
-        schedulerQueue = [];
+        schedulerQueue = ([]: Array<$FlowFixMe | (() => void)>);
         source = getRecordSourceImplementation({});
         store = new RelayModernStore(source, {
           gcScheduler: mockScheduler,

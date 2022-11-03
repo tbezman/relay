@@ -4,14 +4,14 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow strict-local
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
 
-// flowlint ambiguous-object-type:error
-
 'use strict';
+
+import type {SelectorData} from 'relay-runtime/store/RelayStoreTypes';
 import type {
   RelayModernStoreSubscriptionsTest1Fragment$data,
   RelayModernStoreSubscriptionsTest1Fragment$fragmentType,
@@ -43,7 +43,7 @@ const RelayOptimisticRecordSource = require('../RelayOptimisticRecordSource');
 const RelayRecordSource = require('../RelayRecordSource');
 const {INVALIDATED_AT_KEY, REF_KEY} = require('../RelayStoreUtils');
 
-function assertIsDeeplyFrozen(value: ?{...} | ?$ReadOnlyArray<{...}>) {
+function assertIsDeeplyFrozen(value: ?{...} | ?$ReadOnlyArray<{...}>): void {
   if (!value) {
     throw new Error(
       'Expected value to be a non-null object or array of objects',
@@ -65,8 +65,10 @@ function cloneEventWithSets(event: LogEvent) {
     if (event.hasOwnProperty(key)) {
       const val = event[key];
       if (val instanceof Set) {
+        // $FlowFixMe[prop-missing]
         nextEvent[key] = new Set(val);
       } else {
+        // $FlowFixMe[prop-missing]
         nextEvent[key] = val;
       }
     }
@@ -128,7 +130,9 @@ function cloneEventWithSets(event: LogEvent) {
             me: {__ref: '4'},
           },
         };
-        logEvents = [];
+        logEvents = ([]: Array<
+          $FlowFixMe | {...} | {data: ?SelectorData, kind: string},
+        >);
         source = getRecordSourceImplementation(data);
         store = new RelayModernStore(source, {
           log: event => {

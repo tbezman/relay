@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -116,10 +114,10 @@ function fetchQuery<TVariables: Variables, TData, TRawResponse>(
   environment: IEnvironment,
   query: Query<TVariables, TData, TRawResponse>,
   variables: TVariables,
-  options?: $ReadOnly<{|
+  options?: $ReadOnly<{
     fetchPolicy?: FetchQueryFetchPolicy,
     networkCacheConfig?: CacheConfig,
-  |}>,
+  }>,
 ): RelayObservable<TData> {
   const queryNode = getRequest(query);
   invariant(
@@ -150,7 +148,9 @@ function fetchQuery<TVariables: Variables, TData, TRawResponse>(
 
   switch (fetchPolicy) {
     case 'network-only': {
-      return getNetworkObservable(environment, operation).map(readData);
+      return getNetworkObservable<$FlowFixMe>(environment, operation).map(
+        readData,
+      );
     }
     case 'store-or-network': {
       if (environment.check(operation).status === 'available') {
@@ -158,7 +158,9 @@ function fetchQuery<TVariables: Variables, TData, TRawResponse>(
           readData,
         );
       }
-      return getNetworkObservable(environment, operation).map(readData);
+      return getNetworkObservable<$FlowFixMe>(environment, operation).map(
+        readData,
+      );
     }
     default:
       (fetchPolicy: empty);

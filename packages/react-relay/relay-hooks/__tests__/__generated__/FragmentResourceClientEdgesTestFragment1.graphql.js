@@ -4,7 +4,9 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<7d5eea5d58b5123c16dbaa0c69c9fcd1>>
+ * @oncall relay
+ *
+ * @generated SignedSource<<007cab2256b44a2b5fc1f49c74d91d67>>
  * @flow
  * @lightSyntaxTransform
  * @nogrep
@@ -16,7 +18,14 @@
 
 /*::
 import type { Fragment, ReaderFragment } from 'relay-runtime';
+import type { UserClientEdgeResolver$key } from "./../../../../relay-runtime/store/__tests__/resolvers/__generated__/UserClientEdgeResolver.graphql";
 import type { FragmentType } from "relay-runtime";
+import {client_edge as userClientEdgeResolver} from "../../../../relay-runtime/store/__tests__/resolvers/UserClientEdgeResolver.js";
+// Type assertion validating that `userClientEdgeResolver` resolver is correctly implemented.
+// A type error here indicates that the type signature of the resolver module is incorrect.
+(userClientEdgeResolver: (
+  rootKey: UserClientEdgeResolver$key, 
+) => mixed);
 declare export opaque type FragmentResourceClientEdgesTestFragment1$fragmentType: FragmentType;
 export type FragmentResourceClientEdgesTestFragment1$data = {|
   +client_edge: ?{|
@@ -52,7 +61,7 @@ var node/*: ReaderFragment*/ = {
         },
         "kind": "RelayResolver",
         "name": "client_edge",
-        "resolverModule": require('./../../../../relay-runtime/store/__tests__/resolvers/UserClientEdgeResolver.js'),
+        "resolverModule": require('./../../../../relay-runtime/store/__tests__/resolvers/UserClientEdgeResolver').client_edge,
         "path": "client_edge"
       },
       "linkedField": {

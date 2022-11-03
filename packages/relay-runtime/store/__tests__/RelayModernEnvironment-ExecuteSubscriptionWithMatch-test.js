@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -64,13 +62,13 @@ describe.each(['RelayModernEnvironment', 'MultiActorEnvironment'])(
       let commentQuery;
       let queryOperation;
       let operationCallback;
-      let operationLoader: {|
+      let operationLoader: {
         get: JestMockFn<$ReadOnlyArray<mixed>, ?NormalizationRootNode>,
         load: JestMockFn<
           $ReadOnlyArray<mixed>,
           Promise<?NormalizationRootNode>,
         >,
-      |};
+      };
       let resolveFragment;
       let source;
       let store;
@@ -270,6 +268,7 @@ describe.each(['RelayModernEnvironment', 'MultiActorEnvironment'])(
         expect(next.mock.calls.length).toBe(1);
         expect(complete).not.toBeCalled();
         expect(error).not.toBeCalled();
+        // $FlowFixMe[prop-missing]
         const nextID = payload.extensions?.__relay_subscription_root_id;
         const nextOperation = createReaderSelector(
           operation.fragment.node,
@@ -379,6 +378,7 @@ describe.each(['RelayModernEnvironment', 'MultiActorEnvironment'])(
           'RelayModernEnvironmentExecuteSubscriptionWithMatchTestMarkdownUserNameRenderer_name$normalization.graphql',
         );
 
+        // $FlowFixMe[prop-missing]
         const nextID = payload.extensions?.__relay_subscription_root_id;
         const nextOperation = createReaderSelector(
           operation.fragment.node,
@@ -705,7 +705,7 @@ describe.each(['RelayModernEnvironment', 'MultiActorEnvironment'])(
 
         beforeEach(() => {
           taskID = 0;
-          tasks = new Map();
+          tasks = new Map<string, () => void>();
           scheduler = {
             cancel: (id: string) => {
               tasks.delete(id);

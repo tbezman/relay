@@ -6,9 +6,8 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -30,12 +29,12 @@ const RelayFeatureFlags = require('../util/RelayFeatureFlags');
 const hasOverlappingIDs = require('./hasOverlappingIDs');
 const RelayReader = require('./RelayReader');
 
-type Subscription = {|
+type Subscription = {
   callback: (snapshot: Snapshot) => void,
   snapshot: Snapshot,
   stale: boolean,
   backup: ?Snapshot,
-|};
+};
 
 class RelayStoreSubscriptions implements StoreSubscriptions {
   _subscriptions: Set<Subscription>;

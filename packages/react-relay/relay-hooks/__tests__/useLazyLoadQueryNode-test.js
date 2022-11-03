@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 import type {LogEvent} from '../../../relay-runtime/store/RelayStoreTypes';
@@ -88,12 +86,12 @@ function expectToHaveFetched(
   ).toEqual(true);
 }
 
-type Props = {|
+type Props = {
   variables: {...},
   fetchPolicy?: FetchPolicy,
   key?: number,
   extraData?: number,
-|};
+};
 
 describe('useLazyLoadQueryNode', () => {
   let environment;
@@ -120,12 +118,12 @@ describe('useLazyLoadQueryNode', () => {
     errorBoundaryDidCatchFn = jest.fn();
 
     class ErrorBoundary extends React.Component<any, any> {
-      state = {error: null};
+      state: any | {error: null} = {error: null};
       componentDidCatch(error: Error) {
         errorBoundaryDidCatchFn(error);
         this.setState({error});
       }
-      render() {
+      render(): any | React.Node {
         const {children, fallback} = this.props;
         const {error} = this.state;
         if (error) {
@@ -832,7 +830,7 @@ describe('useLazyLoadQueryNode', () => {
         variables,
       );
 
-      function FragmentComponent(props: {|query: mixed|}) {
+      function FragmentComponent(props: {query: mixed}) {
         const fragment = getFragment(gqlFragment);
         const result: $FlowFixMe = useFragmentNode(
           fragment,
@@ -843,7 +841,7 @@ describe('useLazyLoadQueryNode', () => {
         return null;
       }
 
-      const Renderer = (props: {|variables: {|id: string|}|}) => {
+      const Renderer = (props: {variables: {id: string}}) => {
         const _query = createOperationDescriptor(
           gqlOnlyFragmentsQuery,
           props.variables,

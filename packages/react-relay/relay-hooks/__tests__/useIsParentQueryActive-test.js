@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -387,7 +385,7 @@ it('should only update if the latest owner completes the query', () => {
   expect(fetch).toBeCalledTimes(1);
   let setRef = (ref: $FlowFixMe) => {};
   const mockFn = jest.fn(() => {});
-  const Renderer = (props: {|pending: boolean|}) => {
+  const Renderer = (props: {pending: boolean}) => {
     mockFn(props.pending);
     return props.pending;
   };

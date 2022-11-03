@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 import type {RelayMockEnvironment} from '../../../relay-test-utils/RelayModernMockEnvironment';
@@ -58,13 +56,13 @@ describe('useRefetchableFragmentNode with useTransition', () => {
     ) {
       const [isPending, startTransition] = useTransition();
       const {fragmentData: data, ...result} =
-        useRefetchableFragmentNodeOriginal(
+        useRefetchableFragmentNodeOriginal<any, any>(
           fragmentNode,
           fragmentRef,
           'TestComponent',
         );
       refetch = (...args: any) => {
-        let disposable: Disposable | {|dispose: () => void|} = {
+        let disposable: Disposable | {dispose: () => void} = {
           dispose: () => {},
         };
         startTransition(() => {
@@ -91,7 +89,7 @@ describe('useRefetchableFragmentNode with useTransition', () => {
     }
 
     function assertYield(
-      expected: {|data: any, isPending: boolean|},
+      expected: {data: any, isPending: boolean},
       actual: any,
     ) {
       expect(actual.isPending).toEqual(expected.isPending);
@@ -99,10 +97,10 @@ describe('useRefetchableFragmentNode with useTransition', () => {
     }
 
     function expectFragmentResults(
-      expectedYields: $ReadOnlyArray<{|
+      expectedYields: $ReadOnlyArray<{
         data: $FlowFixMe,
         isPending: boolean,
-      |}>,
+      }>,
     ) {
       assertYieldsWereCleared();
       Scheduler.unstable_flushAllWithoutAsserting();
@@ -139,11 +137,11 @@ describe('useRefetchableFragmentNode with useTransition', () => {
 
     function expectFragmentIsPendingOnRefetch(
       renderer: any,
-      expected: {|
+      expected: {
         data: mixed,
         refetchQuery?: OperationDescriptor,
         refetchVariables: Variables,
-      |},
+      },
     ) {
       // Assert fragment sets isPending to true
       expectFragmentResults([
@@ -247,7 +245,7 @@ describe('useRefetchableFragmentNode with useTransition', () => {
       });
 
       // Set up renderers
-      Renderer = (props: {|user: mixed|}) => null;
+      Renderer = (props: {user: mixed}) => null;
 
       const Container = (props: {
         userRef?: {...},
@@ -282,7 +280,7 @@ describe('useRefetchableFragmentNode with useTransition', () => {
         return <Renderer user={userData} />;
       };
 
-      const ContextProvider = ({children}: {|children: React.Node|}) => {
+      const ContextProvider = ({children}: {children: React.Node}) => {
         // TODO(T39494051) - We set empty variables in relay context to make
         // Flow happy, but useRefetchableFragmentNode does not use them, instead it uses
         // the variables from the fragment owner.

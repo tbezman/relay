@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 import type {Direction, OperationDescriptor, Variables} from 'relay-runtime';
@@ -26,7 +24,6 @@ const {
   FRAGMENTS_KEY,
   ID_KEY,
   createOperationDescriptor,
-  getRequest,
   graphql,
 } = require('relay-runtime');
 const {createMockEnvironment} = require('relay-test-utils');
@@ -60,11 +57,11 @@ describe('useBlockingPaginationFragment with useTransition', () => {
     let Renderer;
 
     class ErrorBoundary extends React.Component<any, any> {
-      state = {error: null};
+      state: any | {error: null} = {error: null};
       componentDidCatch(error: Error) {
         this.setState({error});
       }
-      render() {
+      render(): any | React.Node {
         const {children, fallback} = this.props;
         const {error} = this.state;
         if (error) {
@@ -80,14 +77,14 @@ describe('useBlockingPaginationFragment with useTransition', () => {
     ) {
       const [isPendingNext, startTransition] = useTransition();
       // $FlowFixMe[incompatible-call]
-      const {data, ...result} = useBlockingPaginationFragmentOriginal(
+      const {data, ...result} = useBlockingPaginationFragmentOriginal<any, any>(
         fragmentNode,
         // $FlowFixMe[prop-missing]
         // $FlowFixMe[incompatible-call]
         fragmentRef,
       );
       loadNext = (...args: Array<any>) => {
-        let disposable: Disposable | {|dispose: () => void|} = {
+        let disposable: Disposable | {dispose: () => void} = {
           dispose: () => {},
         };
         startTransition(() => {
@@ -117,12 +114,12 @@ describe('useBlockingPaginationFragment with useTransition', () => {
     }
 
     function assertYield(
-      expected: {|
+      expected: {
         data: any,
         hasNext: boolean,
         hasPrevious: boolean,
         isPendingNext: boolean,
-      |},
+      },
       actual: any,
     ) {
       expect(actual.data).toEqual(expected.data);
@@ -132,12 +129,12 @@ describe('useBlockingPaginationFragment with useTransition', () => {
     }
 
     function expectFragmentResults(
-      expectedYields: $ReadOnlyArray<{|
+      expectedYields: $ReadOnlyArray<{
         data: $FlowFixMe,
         isPendingNext: boolean,
         hasNext: boolean,
         hasPrevious: boolean,
-      |}>,
+      }>,
     ) {
       assertYieldsWereCleared();
       Scheduler.unstable_flushNumberOfYields(expectedYields.length);
@@ -163,12 +160,12 @@ describe('useBlockingPaginationFragment with useTransition', () => {
     function expectFragmentIsPendingOnPagination(
       renderer: any,
       direction: Direction,
-      expected: {|
+      expected: {
         data: mixed,
         hasNext: boolean,
         hasPrevious: boolean,
         paginationVariables: Variables,
-      |},
+      },
     ) {
       // Assert fragment sets isPending to true
       expectFragmentResults([
@@ -389,7 +386,7 @@ describe('useBlockingPaginationFragment with useTransition', () => {
       });
 
       // Set up renderers
-      Renderer = (props: {|user: any|}) => null;
+      Renderer = (props: {user: any}) => null;
 
       const Container = (props: {
         userRef?: {...},
@@ -420,7 +417,7 @@ describe('useBlockingPaginationFragment with useTransition', () => {
         return <Renderer user={userData} />;
       };
 
-      const ContextProvider = ({children}: {|children: React.Node|}) => {
+      const ContextProvider = ({children}: {children: React.Node}) => {
         // TODO(T39494051) - We set empty variables in relay context to make
         // Flow happy, but useBlockingPaginationFragment does not use them, instead it uses
         // the variables from the fragment owner.
@@ -1040,14 +1037,14 @@ describe('useBlockingPaginationFragment with useTransition', () => {
 
       function expectFragmentSuspendedOnRefetch(
         renderer: any,
-        expected: {|
+        expected: {
           data: mixed,
           hasNext: boolean,
           hasPrevious: boolean,
           refetchVariables: Variables,
           refetchQuery?: OperationDescriptor,
           gqlRefetchQuery?: $FlowFixMe,
-        |},
+        },
         flushFallback: boolean = true,
       ) {
         assertYieldsWereCleared();

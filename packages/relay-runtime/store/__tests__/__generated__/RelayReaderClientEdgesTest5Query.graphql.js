@@ -4,7 +4,9 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<d7a15583b4638f84bb3dfe27f52fdd19>>
+ * @oncall relay
+ *
+ * @generated SignedSource<<e3d36e34acd7b1adeec7b695e00fdd41>>
  * @flow
  * @lightSyntaxTransform
  * @nogrep
@@ -16,6 +18,13 @@
 
 /*::
 import type { ConcreteRequest, Query } from 'relay-runtime';
+import type { UserClientEdgeResolver$key } from "./../resolvers/__generated__/UserClientEdgeResolver.graphql";
+import {client_edge as userClientEdgeResolver} from "../resolvers/UserClientEdgeResolver.js";
+// Type assertion validating that `userClientEdgeResolver` resolver is correctly implemented.
+// A type error here indicates that the type signature of the resolver module is incorrect.
+(userClientEdgeResolver: (
+  rootKey: UserClientEdgeResolver$key, 
+) => mixed);
 export type RelayReaderClientEdgesTest5Query$variables = {||};
 export type RelayReaderClientEdgesTest5Query$data = {|
   +me: ?{|
@@ -33,13 +42,15 @@ export type RelayReaderClientEdgesTest5Query = {|
 */
 
 var node/*: ConcreteRequest*/ = (function(){
-var v0 = {
-  "alias": null,
-  "args": null,
-  "kind": "ScalarField",
-  "name": "name",
-  "storageKey": null
-},
+var v0 = [
+  {
+    "alias": null,
+    "args": null,
+    "kind": "ScalarField",
+    "name": "name",
+    "storageKey": null
+  }
+],
 v1 = {
   "alias": null,
   "args": null,
@@ -88,7 +99,7 @@ return {
                       },
                       "kind": "RelayResolver",
                       "name": "client_edge",
-                      "resolverModule": require('./../resolvers/UserClientEdgeResolver.js'),
+                      "resolverModule": require('./../resolvers/UserClientEdgeResolver').client_edge,
                       "path": "me.client_extension_linked_field.client_edge"
                     },
                     "linkedField": {
@@ -98,9 +109,7 @@ return {
                       "kind": "LinkedField",
                       "name": "client_edge",
                       "plural": false,
-                      "selections": [
-                        (v0/*: any*/)
-                      ],
+                      "selections": (v0/*: any*/),
                       "storageKey": null
                     }
                   }
@@ -142,7 +151,18 @@ return {
                 "name": "client_extension_linked_field",
                 "plural": false,
                 "selections": [
-                  (v0/*: any*/),
+                  {
+                    "name": "client_edge",
+                    "args": null,
+                    "fragment": {
+                      "kind": "InlineFragment",
+                      "selections": (v0/*: any*/),
+                      "type": "User",
+                      "abstractKey": null
+                    },
+                    "kind": "RelayResolver",
+                    "storageKey": null
+                  },
                   (v1/*: any*/)
                 ],
                 "storageKey": null

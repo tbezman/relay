@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 import type {RelayMockEnvironment} from '../../relay-test-utils/RelayModernMockEnvironment';
@@ -29,7 +27,7 @@ const {createMockEnvironment} = require('relay-test-utils');
 function expectToHaveFetched(
   environment: RelayMockEnvironment,
   query: OperationDescriptor,
-  {count}: {|count: number|},
+  {count}: {count: number},
 ) {
   // $FlowFixMe[method-unbinding] added when improving typing for this parameters
   expect(environment.execute).toBeCalledTimes(count);
@@ -112,7 +110,7 @@ describe.skip('ReactRelayQueryRenderer-react-double-effects', () => {
 
   it('forces a re-render and refetches query when effects are double invoked', () => {
     let renderLogs = [];
-    const QueryComponent = function ({node}: {|node: any|}) {
+    const QueryComponent = function ({node}: {node: any}) {
       const name = node?.name ?? 'Empty';
       useEffect(() => {
         renderLogs.push(`commit: ${name}`);
@@ -125,7 +123,7 @@ describe.skip('ReactRelayQueryRenderer-react-double-effects', () => {
       return name;
     };
 
-    const QueryContainer = function (props: {|variables: {|id: string|}|}) {
+    const QueryContainer = function (props: {variables: {id: string}}) {
       return (
         <ReactRelayQueryRenderer
           cacheConfig={{force: true}}

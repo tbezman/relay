@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 import type {RelayMockEnvironment} from '../../../relay-test-utils/RelayModernMockEnvironment';
@@ -32,14 +30,14 @@ const {createMockEnvironment} = require('relay-test-utils');
 function expectToHaveFetched(
   environment: RelayMockEnvironment,
   query: OperationDescriptor,
-  cacheConfig: {|
+  cacheConfig: {
     force?: ?boolean,
     liveConfigId?: ?string,
     metadata?: {[key: string]: mixed},
     onSubscribe?: () => void,
     poll?: ?number,
     transactionId?: ?string,
-  |},
+  },
 ) {
   // $FlowFixMe[method-unbinding] added when improving typing for this parameters
   expect(environment.executeWithSource).toBeCalledTimes(1);
@@ -147,7 +145,7 @@ describe.skip('useQueryLoader-react-double-effects', () => {
 
     loaderRenderLogs = [];
     LoaderComponent = function (props: any) {
-      const [queryRef] = useQueryLoader(gqlQuery, props.initialQueryRef);
+      const [queryRef] = useQueryLoader<empty>(gqlQuery, props.initialQueryRef);
 
       const queryRefId = queryRef == null ? 'null' : queryRef.id ?? 'Unknown';
       useEffect(() => {
@@ -174,9 +172,9 @@ describe.skip('useQueryLoader-react-double-effects', () => {
 
     render = function (
       initialQueryRef: any,
-      {suspendWholeTree}: {|suspendWholeTree?: boolean|} = ({
-        ...null,
-      }: {|suspendWholeTree?: boolean|}),
+      {suspendWholeTree}: {suspendWholeTree?: boolean} = ({}: {
+        suspendWholeTree?: boolean,
+      }),
     ): $FlowFixMe {
       let instance;
       ReactTestRenderer.act(() => {

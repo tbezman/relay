@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -22,13 +20,13 @@ const invariant = require('invariant');
 function getPaginationMetadata(
   fragmentNode: ReaderFragment,
   componentDisplayName: string,
-): {|
+): {
   connectionPathInFragmentData: $ReadOnlyArray<string | number>,
   identifierField: ?string,
   paginationRequest: ConcreteRequest,
   paginationMetadata: ReaderPaginationMetadata,
   stream: boolean,
-|} {
+} {
   const {refetchableRequest: paginationRequest, refetchMetadata} =
     getRefetchMetadata(fragmentNode, componentDisplayName);
 

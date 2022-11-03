@@ -6,10 +6,8 @@
  *
  * @flow strict-local
  * @format
- * @emails oncall+relay
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -65,10 +63,10 @@ function withProvidedVariables(
   }
 }
 
-if (__DEV__) {
-  withProvidedVariables.tests_only_resetDebugCache = () => {
-    debugCache = WEAKMAP_SUPPORTED ? new WeakMap() : new Map();
-  };
-}
+withProvidedVariables.tests_only_resetDebugCache = ((__DEV__
+  ? () => {
+      debugCache = WEAKMAP_SUPPORTED ? new WeakMap() : new Map();
+    }
+  : undefined): void | (() => void));
 
 module.exports = withProvidedVariables;

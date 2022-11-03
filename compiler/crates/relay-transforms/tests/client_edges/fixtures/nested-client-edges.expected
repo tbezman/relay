@@ -25,34 +25,42 @@ fragment Foo_user on User {
   ... @__ClientEdgeMetadataDirective
   # ServerObject {
   #     query_name: "ClientEdgeQuery_Foo_user_best_friend",
+  #     unique_id: 1,
   # }
    {
     ...BestFriendResolverFragment_name @__RelayResolverMetadata
     # RelayResolverMetadata {
     #     field_parent_type: "User",
     #     import_path: "BestFriendResolver",
+    #     import_name: None,
     #     field_name: "best_friend",
     #     field_alias: None,
     #     field_path: "best_friend",
     #     field_arguments: [],
     #     live: false,
+    #     output_type_info: None,
+    #     fragment_data_injection_mode: None,
     # }
      @waterfall
     best_friend @waterfall {
       ... @__ClientEdgeMetadataDirective
       # ServerObject {
       #     query_name: "ClientEdgeQuery_Foo_user_best_friend__best_friend",
+      #     unique_id: 0,
       # }
        {
         ...BestFriendResolverFragment_name @__RelayResolverMetadata
         # RelayResolverMetadata {
         #     field_parent_type: "User",
         #     import_path: "BestFriendResolver",
+        #     import_name: None,
         #     field_name: "best_friend",
         #     field_alias: None,
         #     field_path: "best_friend",
         #     field_arguments: [],
         #     live: false,
+        #     output_type_info: None,
+        #     fragment_data_injection_mode: None,
         # }
          @waterfall
         best_friend @waterfall {
@@ -77,17 +85,21 @@ fragment RefetchableClientEdgeQuery_Foo_user_best_friend on User @__clientEdgeGe
   ... @__ClientEdgeMetadataDirective
   # ServerObject {
   #     query_name: "ClientEdgeQuery_Foo_user_best_friend__best_friend",
+  #     unique_id: 0,
   # }
    {
     ...BestFriendResolverFragment_name @__RelayResolverMetadata
     # RelayResolverMetadata {
     #     field_parent_type: "User",
     #     import_path: "BestFriendResolver",
+    #     import_name: None,
     #     field_name: "best_friend",
     #     field_alias: None,
     #     field_path: "best_friend",
     #     field_arguments: [],
     #     live: false,
+    #     output_type_info: None,
+    #     fragment_data_injection_mode: None,
     # }
      @waterfall
     best_friend @waterfall {

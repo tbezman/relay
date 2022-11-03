@@ -1,7 +1,7 @@
 {
   "name": "relay",
   "displayName": "Relay GraphQL",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "description": "Relay-powered IDE experience",
   "repository": {
     "type": "git",
@@ -22,39 +22,10 @@
     "onLanguage:typescript",
     "onLanguage:typescriptreact"
   ],
+  "extensionDependencies": [
+    "GraphQL.vscode-graphql-syntax"
+  ],
   "contributes": {
-    "languages": [
-      {
-        "id": "graphql",
-        "extensions": [
-          ".gql",
-          ".graphql",
-          ".graphqls"
-        ],
-        "aliases": [
-          "GraphQL",
-          "graphql"
-        ],
-        "configuration": "./language/language-configuration.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "graphql",
-        "path": "./grammars/graphql.json",
-        "scopeName": "source.graphql"
-      },
-      {
-        "injectTo": [
-          "source.js",
-          "source.ts",
-          "source.js.jsx",
-          "source.tsx"
-        ],
-        "scopeName": "inline.graphql",
-        "path": "./grammars/graphql.js.json"
-      }
-    ],
     "commands": [
       {
         "command": "relay.restart",
@@ -106,6 +77,32 @@
           ],
           "description": "Absolute path to the relay binary. If not provided, the extension will look in the nearest node_modules directory"
         },
+        "relay.projects": {
+          "type": "array",
+          "default": null,
+          "items": {
+            "type": "object",
+            "required": [
+              "rootDirectory",
+              "name"
+            ],
+            "title": "A single Relay project path info",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The name of the project. We'll use this to display messages related to the project's output."
+              },
+              "rootDirectory": {
+                "type": "string",
+                "description": "A path relative to the root of your VSCode project for the extension to work from. The default value is the root of your project. This will change where we start looking for the relay-compiler node module. This will also affect where the LSP server is started, therefore affecting how the relay config is found. This is helpful if your project is in a nested directory."
+              },
+              "pathToConfig": {
+                "type": "string",
+                "description": "Path to a relay config relative to the `rootDirectory`. Without this, the compiler will search for your config. This is helpful if your relay project is in a nested directory."
+              }
+            }
+          }
+        },
         "relay.rootDirectory": {
           "scope": "workspace",
           "default": null,
@@ -113,7 +110,8 @@
             "string",
             "null"
           ],
-          "description": "A path relative to the root of your VSCode project for the extension to work from. The default value is the root of your project. This will change where we start looking for the relay-compiler node module. This will also affect where the LSP server is started, therefore affecting how the relay config is found. This is helpful if your project is in a nested directory."
+          "description": "A path relative to the root of your VSCode project for the extension to work from. The default value is the root of your project. This will change where we start looking for the relay-compiler node module. This will also affect where the LSP server is started, therefore affecting how the relay config is found. This is helpful if your project is in a nested directory.",
+          "deprecationMessage": "Deprecated: Please use relay.projects instead."
         },
         "relay.pathToConfig": {
           "scope": "workspace",
@@ -122,7 +120,8 @@
             "string",
             "null"
           ],
-          "description": "Path to a relay config relative to the `rootDirectory`. Without this, the compiler will search for your config. This is helpful if your relay project is in a nested directory."
+          "description": "Path to a relay config relative to the `rootDirectory`. Without this, the compiler will search for your config. This is helpful if your relay project is in a nested directory.",
+          "deprecationMessage": "Deprecated: Please use relay.projects instead."
         },
         "relay.autoStartCompiler": {
           "scope": "workspace",
@@ -148,7 +147,7 @@
     "build-local": "vsce package"
   },
   "engines": {
-    "vscode": "^1.65.0"
+    "vscode": "^1.60.0"
   },
   "dependencies": {
     "semver": "^7.3.7",

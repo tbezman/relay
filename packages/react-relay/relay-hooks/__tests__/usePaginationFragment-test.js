@@ -4,14 +4,13 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
 
-// flowlint ambiguous-object-type:error
-
 'use strict';
+
 import type {
   usePaginationFragmentTestStoryFragmentRefetchQuery$data,
   usePaginationFragmentTestStoryFragmentRefetchQuery$variables,
@@ -31,25 +30,48 @@ import type {
 import type {Direction, OperationDescriptor, Variables} from 'relay-runtime';
 import type {Query} from 'relay-runtime/util/RelayRuntimeTypes';
 
-const usePaginationFragmentOriginal = require('../usePaginationFragment');
+const usePaginationFragmentInternal_REACT_CACHE = require('../react-cache/usePaginationFragment_REACT_CACHE');
+const usePaginationFragment_LEGACY = require('../usePaginationFragment');
+const areEqual = require('areEqual');
 const invariant = require('invariant');
 const React = require('react');
 const ReactRelayContext = require('react-relay/ReactRelayContext');
 const TestRenderer = require('react-test-renderer');
 const {
   ConnectionHandler,
+  Environment,
   FRAGMENT_OWNER_KEY,
   FRAGMENTS_KEY,
   ID_KEY,
+  Network,
+  Observable,
+  RecordSource,
+  RelayFeatureFlags,
+  Store,
   __internal: {fetchQuery},
   createOperationDescriptor,
   graphql,
 } = require('relay-runtime');
-const {createMockEnvironment} = require('relay-test-utils');
 
 const {useMemo, useState} = React;
 
-describe('usePaginationFragment', () => {
+describe.each([
+  ['React Cache', usePaginationFragmentInternal_REACT_CACHE],
+  ['Legacy', usePaginationFragment_LEGACY],
+])('usePaginationFragment (%s)', (_hookName, usePaginationFragmentOriginal) => {
+  let isUsingReactCacheImplementation;
+  let originalReactCacheFeatureFlag;
+  beforeEach(() => {
+    isUsingReactCacheImplementation =
+      usePaginationFragmentOriginal ===
+      usePaginationFragmentInternal_REACT_CACHE;
+    originalReactCacheFeatureFlag = RelayFeatureFlags.USE_REACT_CACHE;
+    RelayFeatureFlags.USE_REACT_CACHE = isUsingReactCacheImplementation;
+  });
+  afterEach(() => {
+    RelayFeatureFlags.USE_REACT_CACHE = originalReactCacheFeatureFlag;
+  });
+
   let environment;
   let initialUser;
   let gqlQuery:
@@ -92,13 +114,16 @@ describe('usePaginationFragment', () => {
   let loadNext;
   let refetch;
   let Renderer;
+  let fetch;
+  let dataSource;
+  let unsubscribe;
 
   class ErrorBoundary extends React.Component<any, any> {
-    state = {error: null};
+    state: {error: ?Error} = {error: null};
     componentDidCatch(error: Error) {
       this.setState({error});
     }
-    render() {
+    render(): React.Node {
       const {children, fallback} = this.props;
       const {error} = this.state;
       if (error) {
@@ -109,7 +134,7 @@ describe('usePaginationFragment', () => {
   }
 
   function usePaginationFragment(fragmentNode: any, fragmentRef: any) {
-    const {data, ...result} = usePaginationFragmentOriginal(
+    const {data, ...result} = usePaginationFragmentOriginal<any, any>(
       fragmentNode,
       fragmentRef,
     );
@@ -120,13 +145,13 @@ describe('usePaginationFragment', () => {
   }
 
   function assertCall(
-    expected: {|
+    expected: {
       data: any,
       hasNext: boolean,
       hasPrevious: boolean,
       isLoadingNext: boolean,
       isLoadingPrevious: boolean,
-    |},
+    },
     idx: number,
   ) {
     const actualData = renderSpy.mock.calls[idx][0];
@@ -144,19 +169,25 @@ describe('usePaginationFragment', () => {
   }
 
   function expectFragmentResults(
-    expectedCalls: $ReadOnlyArray<{|
+    expectedCalls: $ReadOnlyArray<{
       data: $FlowFixMe,
       isLoadingNext: boolean,
       isLoadingPrevious: boolean,
       hasNext: boolean,
       hasPrevious: boolean,
-    |}>,
+    }>,
   ) {
     // This ensures that useEffect runs
     TestRenderer.act(() => jest.runAllImmediates());
     expect(renderSpy).toBeCalledTimes(expectedCalls.length);
     expectedCalls.forEach((expected, idx) => assertCall(expected, idx));
     renderSpy.mockClear();
+  }
+
+  function resolveQuery(payload: mixed) {
+    // $FlowFixMe[incompatible-call]
+    dataSource.next(payload);
+    dataSource.complete();
   }
 
   function createFragmentRef(
@@ -178,38 +209,38 @@ describe('usePaginationFragment', () => {
     };
   }
 
-  const unsubscribe = jest.fn();
-  jest.doMock('relay-runtime', () => {
-    const originalRuntime = jest.requireActual('relay-runtime');
-    const originalInternal = originalRuntime.__internal;
-    return {
-      ...originalRuntime,
-      __internal: {
-        ...originalInternal,
-        fetchQuery: jest.fn((...args) => {
-          const observable = originalInternal.fetchQuery(...args);
-          return {
-            subscribe: observer => {
-              return observable.subscribe({
-                ...observer,
-                start: originalSubscription => {
-                  const observerStart = observer?.start;
-                  observerStart &&
-                    observerStart({
-                      ...originalSubscription,
-                      unsubscribe: () => {
-                        originalSubscription.unsubscribe();
-                        unsubscribe();
-                      },
-                    });
-                },
-              });
-            },
-          };
-        }),
+  function createMockEnvironment() {
+    const source = RecordSource.create();
+    const store = new Store(source);
+    const fetchFn = jest.fn((_query, _variables, _cacheConfig) => {
+      // $FlowFixMe[incompatible-call]
+      return Observable.create(sink => {
+        dataSource = sink;
+        unsubscribe = jest.fn();
+        // $FlowFixMe[incompatible-call]
+        return unsubscribe;
+      });
+    });
+    const environment = new Environment({
+      getDataID: (data: {[string]: mixed}, typename: string) => {
+        // This is the default, but making it explicit in case we need to override
+        // $FlowFixMe[prop-missing]
+        return data.id;
       },
-    };
-  });
+      network: Network.create(fetchFn),
+      store,
+      handlerProvider: _name => {
+        return ConnectionHandler;
+      },
+    });
+    // $FlowFixMe[method-unbinding]
+    const originalRetain = environment.retain;
+    // $FlowFixMe[cannot-write]
+    environment.retain = jest.fn((...args) =>
+      originalRetain.apply(environment, args),
+    );
+    return [environment, fetchFn];
+  }
 
   beforeEach(() => {
     // Set up mocks
@@ -217,9 +248,8 @@ describe('usePaginationFragment', () => {
     jest.mock('warning');
     renderSpy = jest.fn();
     // Set up environment and base data
-    environment = createMockEnvironment({
-      handlerProvider: () => ConnectionHandler,
-    });
+    [environment, fetch] = createMockEnvironment();
+
     variablesWithoutID = {
       after: null,
       first: 1,
@@ -504,7 +534,7 @@ describe('usePaginationFragment', () => {
     });
 
     // Set up renderers
-    Renderer = (props: {|user: any|}) => null;
+    Renderer = (props: {user: any}) => null;
 
     const Container = (props: {
       userRef?: {...},
@@ -544,7 +574,7 @@ describe('usePaginationFragment', () => {
       return <Renderer user={userData} />;
     };
 
-    const ContextProvider = ({children}: {|children: React.Node|}) => {
+    const ContextProvider = ({children}: {children: React.Node}) => {
       const [env, _setEnv] = useState(environment);
       const relayContext = useMemo(() => ({environment: env}), [env]);
 
@@ -608,7 +638,6 @@ describe('usePaginationFragment', () => {
   });
 
   afterEach(() => {
-    environment.mockClear();
     renderSpy.mockClear();
   });
 
@@ -826,26 +855,29 @@ describe('usePaginationFragment', () => {
 
     function expectRequestIsInFlight(expected: any) {
       // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-      expect(environment.execute).toBeCalledTimes(expected.requestCount);
-      expect(
-        environment.mock.isLoading(
-          expected.gqlPaginationQuery ?? gqlPaginationQuery,
-          expected.paginationVariables,
-          {force: true},
-        ),
-      ).toEqual(expected.inFlight);
+      expect(fetch).toBeCalledTimes(expected.requestCount);
+      const fetchCall = fetch.mock.calls.find(call => {
+        return (
+          call[0] ===
+            (expected.gqlPaginationQuery ?? gqlPaginationQuery).params &&
+          areEqual(call[1], expected.paginationVariables) &&
+          areEqual(call[2], {force: true})
+        );
+      });
+      const isInFlight = fetchCall != null;
+      expect(isInFlight).toEqual(expected.inFlight);
     }
 
     function expectFragmentIsLoadingMore(
       renderer: any,
       direction: Direction,
-      expected: {|
+      expected: {
         data: mixed,
         hasNext: boolean,
         hasPrevious: boolean,
         paginationVariables: Variables,
         gqlPaginationQuery?: $FlowFixMe,
-      |},
+      },
     ) {
       // Assert fragment sets isLoading to true
       expect(renderSpy).toBeCalledTimes(1);
@@ -905,7 +937,7 @@ describe('usePaginationFragment', () => {
           ),
         ).toEqual(true);
         // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        expect(environment.execute).toHaveBeenCalledTimes(0);
+        expect(fetch).toHaveBeenCalledTimes(0);
       });
 
       it('does not load more if fragment ref passed to usePaginationFragment() was null', () => {
@@ -935,7 +967,7 @@ describe('usePaginationFragment', () => {
           ),
         ).toEqual(true);
         // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        expect(environment.execute).toHaveBeenCalledTimes(0);
+        expect(fetch).toHaveBeenCalledTimes(0);
       });
 
       it('does not load more if request is already in flight', () => {
@@ -978,7 +1010,7 @@ describe('usePaginationFragment', () => {
           loadNext(1, {onComplete: callback});
         });
         // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        expect(environment.execute).toBeCalledTimes(1);
+        expect(fetch).toBeCalledTimes(1);
         expect(callback).toBeCalledTimes(1);
         expect(renderSpy).toBeCalledTimes(0);
       });
@@ -994,7 +1026,7 @@ describe('usePaginationFragment', () => {
 
         const callback = jest.fn();
         // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        environment.execute.mockClear();
+        fetch.mockClear();
         renderFragment();
 
         expectFragmentResults([
@@ -1011,102 +1043,8 @@ describe('usePaginationFragment', () => {
           loadNext(1, {onComplete: callback});
         });
         // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        expect(environment.execute).toBeCalledTimes(0);
+        expect(fetch).toBeCalledTimes(0);
         expect(callback).toBeCalledTimes(1);
-        expect(renderSpy).toBeCalledTimes(0);
-      });
-
-      it('cancels load more if component unmounts', () => {
-        unsubscribe.mockClear();
-        const callback = jest.fn();
-        const renderer = renderFragment();
-        expectFragmentResults([
-          {
-            data: initialUser,
-            isLoadingNext: false,
-            isLoadingPrevious: false,
-            hasNext: true,
-            hasPrevious: false,
-          },
-        ]);
-
-        TestRenderer.act(() => {
-          loadNext(1, {onComplete: callback});
-        });
-        const paginationVariables = {
-          id: '1',
-          after: 'cursor:1',
-          first: 1,
-          before: null,
-          last: null,
-          isViewerFriendLocal: false,
-          orderby: ['name'],
-          scale: null,
-        };
-        expectFragmentIsLoadingMore(renderer, direction, {
-          data: initialUser,
-          hasNext: true,
-          hasPrevious: false,
-          paginationVariables,
-          gqlPaginationQuery,
-        });
-        expect(unsubscribe).toHaveBeenCalledTimes(0);
-
-        TestRenderer.act(() => {
-          renderer.unmount();
-        });
-        expect(unsubscribe).toHaveBeenCalledTimes(1);
-        // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        expect(environment.execute).toBeCalledTimes(1);
-        expect(callback).toBeCalledTimes(0);
-        expect(renderSpy).toBeCalledTimes(0);
-      });
-
-      it('cancels load more if refetch is called', () => {
-        unsubscribe.mockClear();
-        const callback = jest.fn();
-        const renderer = renderFragment();
-        expectFragmentResults([
-          {
-            data: initialUser,
-            isLoadingNext: false,
-            isLoadingPrevious: false,
-            hasNext: true,
-            hasPrevious: false,
-          },
-        ]);
-
-        TestRenderer.act(() => {
-          loadNext(1, {onComplete: callback});
-        });
-        const paginationVariables = {
-          id: '1',
-          after: 'cursor:1',
-          first: 1,
-          before: null,
-          last: null,
-          isViewerFriendLocal: false,
-          orderby: ['name'],
-          scale: null,
-        };
-        expectFragmentIsLoadingMore(renderer, direction, {
-          data: initialUser,
-          hasNext: true,
-          hasPrevious: false,
-          paginationVariables,
-          gqlPaginationQuery,
-        });
-        expect(unsubscribe).toHaveBeenCalledTimes(0);
-
-        TestRenderer.act(() => {
-          refetch({id: '4'});
-        });
-        expect(unsubscribe).toHaveBeenCalledTimes(1);
-        // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        expect(environment.execute).toBeCalledTimes(1); // loadMore
-        // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        expect(environment.executeWithSource).toBeCalledTimes(1); // refetch
-        expect(callback).toBeCalledTimes(0);
         expect(renderSpy).toBeCalledTimes(0);
       });
 
@@ -1181,7 +1119,7 @@ describe('usePaginationFragment', () => {
         });
         expect(callback).toBeCalledTimes(0);
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -1246,7 +1184,7 @@ describe('usePaginationFragment', () => {
         });
         expect(callback).toBeCalledTimes(0);
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -1384,7 +1322,7 @@ describe('usePaginationFragment', () => {
         });
         expect(callback).toBeCalledTimes(0);
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -1524,7 +1462,7 @@ describe('usePaginationFragment', () => {
         });
         expect(callback).toBeCalledTimes(0);
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -1669,7 +1607,10 @@ describe('usePaginationFragment', () => {
           },
         };
 
-        const renderer = renderFragment({owner: queryNestedFragment, userRef});
+        const renderer = renderFragment({
+          owner: queryNestedFragment,
+          userRef,
+        });
         expectFragmentResults([
           {
             data: initialUser,
@@ -1704,7 +1645,7 @@ describe('usePaginationFragment', () => {
         });
         expect(callback).toBeCalledTimes(0);
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -1822,7 +1763,7 @@ describe('usePaginationFragment', () => {
         expect(callback).toBeCalledTimes(0);
 
         const error = new Error('Oops');
-        environment.mock.reject(gqlPaginationQuery, error);
+        dataSource.error(error);
 
         // We pass the error in the callback, but do not throw during render
         // since we want to continue rendering the existing items in the
@@ -1881,7 +1822,7 @@ describe('usePaginationFragment', () => {
         });
         expect(callback).toBeCalledTimes(0);
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -2004,7 +1945,7 @@ describe('usePaginationFragment', () => {
           });
           expect(callback).toBeCalledTimes(0);
 
-          environment.mock.resolve(gqlPaginationQuery, {
+          resolveQuery({
             data: {
               node: {
                 __typename: 'User',
@@ -2126,7 +2067,7 @@ describe('usePaginationFragment', () => {
           });
           expect(callback).toBeCalledTimes(0);
 
-          environment.mock.resolve(gqlPaginationQuery, {
+          resolveQuery({
             data: {
               node: {
                 __typename: 'User',
@@ -2210,8 +2151,100 @@ describe('usePaginationFragment', () => {
       });
 
       describe('disposing', () => {
-        beforeEach(() => {
+        it('cancels load more if component unmounts', () => {
           unsubscribe.mockClear();
+          const callback = jest.fn();
+          const renderer = renderFragment();
+          expectFragmentResults([
+            {
+              data: initialUser,
+              isLoadingNext: false,
+              isLoadingPrevious: false,
+              hasNext: true,
+              hasPrevious: false,
+            },
+          ]);
+
+          TestRenderer.act(() => {
+            loadNext(1, {onComplete: callback});
+          });
+          const paginationVariables = {
+            id: '1',
+            after: 'cursor:1',
+            first: 1,
+            before: null,
+            last: null,
+            isViewerFriendLocal: false,
+            orderby: ['name'],
+            scale: null,
+          };
+          expectFragmentIsLoadingMore(renderer, direction, {
+            data: initialUser,
+            hasNext: true,
+            hasPrevious: false,
+            paginationVariables,
+            gqlPaginationQuery,
+          });
+          expect(unsubscribe).toHaveBeenCalledTimes(0);
+
+          TestRenderer.act(() => {
+            renderer.unmount();
+            jest.runAllTimers();
+          });
+          expect(unsubscribe).toHaveBeenCalledTimes(1);
+          // $FlowFixMe[method-unbinding] added when improving typing for this parameters
+          expect(fetch).toBeCalledTimes(1);
+          expect(callback).toBeCalledTimes(0);
+          expect(renderSpy).toBeCalledTimes(0);
+        });
+
+        it('cancels load more if refetch is called', () => {
+          unsubscribe.mockClear();
+          const callback = jest.fn();
+          const renderer = renderFragment();
+          expectFragmentResults([
+            {
+              data: initialUser,
+              isLoadingNext: false,
+              isLoadingPrevious: false,
+              hasNext: true,
+              hasPrevious: false,
+            },
+          ]);
+
+          TestRenderer.act(() => {
+            loadNext(1, {onComplete: callback});
+          });
+          const paginationVariables = {
+            id: '1',
+            after: 'cursor:1',
+            first: 1,
+            before: null,
+            last: null,
+            isViewerFriendLocal: false,
+            orderby: ['name'],
+            scale: null,
+          };
+          expectFragmentIsLoadingMore(renderer, direction, {
+            data: initialUser,
+            hasNext: true,
+            hasPrevious: false,
+            paginationVariables,
+            gqlPaginationQuery,
+          });
+          expect(unsubscribe).toHaveBeenCalledTimes(0);
+          const loadNextUnsubscribe = unsubscribe;
+
+          TestRenderer.act(() => {
+            refetch({id: '4'});
+          });
+          // $FlowFixMe[method-unbinding] added when improving typing for this parameters
+          expect(fetch).toBeCalledTimes(2); // loadNext and refetch
+          expect(loadNextUnsubscribe).toHaveBeenCalledTimes(1); // loadNext is cancelled
+          expect(unsubscribe).toHaveBeenCalledTimes(0); // refetch is not cancelled
+          // $FlowFixMe[method-unbinding] added when improving typing for this parameters
+          expect(callback).toBeCalledTimes(0);
+          expect(renderSpy).toBeCalledTimes(0);
         });
 
         it('disposes ongoing request if environment changes', () => {
@@ -2249,12 +2282,13 @@ describe('usePaginationFragment', () => {
             paginationVariables,
             gqlPaginationQuery,
           });
+          const loadNextUnsubscribe = unsubscribe;
           expect(callback).toBeCalledTimes(0);
 
           // Set new environment
-          const newEnvironment = createMockEnvironment({
-            handlerProvider: () => ConnectionHandler,
-          });
+          const [newEnvironment, newFetch] = createMockEnvironment();
+          fetch.mockClear();
+          fetch = newFetch;
           newEnvironment.commitPayload(query, {
             node: {
               __typename: 'User',
@@ -2286,13 +2320,9 @@ describe('usePaginationFragment', () => {
           });
 
           // Assert request was canceled
-          expect(unsubscribe).toBeCalledTimes(1);
-          expectRequestIsInFlight({
-            inFlight: false,
-            requestCount: 1,
-            gqlPaginationQuery,
-            paginationVariables,
-          });
+          expect(loadNextUnsubscribe).toBeCalledTimes(1);
+          // changing environments resets, we don't try to auto-paginate just bc a request was pending
+          expect(fetch).toBeCalledTimes(0);
 
           // Assert newly rendered data
           expectFragmentResults([
@@ -2385,18 +2415,15 @@ describe('usePaginationFragment', () => {
               },
             },
           });
+          fetch.mockClear();
           TestRenderer.act(() => {
             setOwner(newQuery);
           });
 
           // Assert request was canceled
           expect(unsubscribe).toBeCalledTimes(1);
-          expectRequestIsInFlight({
-            inFlight: false,
-            requestCount: 1,
-            gqlPaginationQuery,
-            paginationVariables,
-          });
+          // changing fragment ref resets, we don't try to auto-paginate just bc a request was pending
+          expect(fetch).toBeCalledTimes(0);
 
           // Assert newly rendered data
           const expectedUser = {
@@ -2478,12 +2505,7 @@ describe('usePaginationFragment', () => {
 
           // Assert request was canceled
           expect(unsubscribe).toBeCalledTimes(1);
-          expectRequestIsInFlight({
-            inFlight: false,
-            requestCount: 1,
-            gqlPaginationQuery,
-            paginationVariables,
-          });
+          expect(fetch).toBeCalledTimes(1); // the loadNext call
         });
 
         it('disposes ongoing request if it is manually disposed', () => {
@@ -2524,26 +2546,19 @@ describe('usePaginationFragment', () => {
           });
           expect(callback).toBeCalledTimes(0);
 
-          // $FlowFixMe[incompatible-use]
-          disposable.dispose();
+          expect(disposable).toBeTruthy();
+          disposable?.dispose();
 
           // Assert request was canceled
           expect(unsubscribe).toBeCalledTimes(1);
-          expectRequestIsInFlight({
-            inFlight: false,
-            requestCount: 1,
-            gqlPaginationQuery,
-            paginationVariables,
-          });
+          expect(fetch).toBeCalledTimes(1); // the loadNext call
           expect(renderSpy).toHaveBeenCalledTimes(0);
         });
       });
 
       describe('when parent query is streaming', () => {
         beforeEach(() => {
-          environment = createMockEnvironment({
-            handlerProvider: () => ConnectionHandler,
-          });
+          [environment, fetch] = createMockEnvironment();
           environment.commitPayload(query, {
             node: {
               __typename: 'User',
@@ -2574,7 +2589,7 @@ describe('usePaginationFragment', () => {
 
           // Resolve first payload
           TestRenderer.act(() => {
-            environment.mock.nextValue(gqlQueryWithStreaming, {
+            dataSource.next({
               data: {
                 node: {
                   __typename: 'User',
@@ -2647,7 +2662,7 @@ describe('usePaginationFragment', () => {
 
           // Resolve page info
           TestRenderer.act(() => {
-            environment.mock.nextValue(gqlQueryWithStreaming, {
+            resolveQuery({
               data: {
                 pageInfo: {
                   endCursor: 'cursor:1',
@@ -2702,7 +2717,7 @@ describe('usePaginationFragment', () => {
           ]);
 
           // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-          environment.execute.mockClear();
+          fetch.mockClear();
           renderSpy.mockClear();
           // Call `capturedLoadNext`, which should be a no-op since it's
           // bound to the snapshot of the fragment taken while the query is
@@ -2713,7 +2728,7 @@ describe('usePaginationFragment', () => {
 
           // Assert that calling `capturedLoadNext` is a no-op
           // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-          expect(environment.execute).toBeCalledTimes(0);
+          expect(fetch).toBeCalledTimes(0);
           expect(renderSpy).toBeCalledTimes(0);
 
           // Calling `loadNext`, should be fine since it's bound to the
@@ -2725,7 +2740,7 @@ describe('usePaginationFragment', () => {
 
           // Assert that calling `loadNext` starts the request
           // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-          expect(environment.execute).toBeCalledTimes(1);
+          expect(fetch).toBeCalledTimes(1);
           expect(renderSpy).toBeCalledTimes(1);
         });
       });
@@ -3102,7 +3117,7 @@ describe('usePaginationFragment', () => {
         });
         expect(callback).toBeCalledTimes(0);
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -3221,7 +3236,7 @@ describe('usePaginationFragment', () => {
         });
         expect(callback).toBeCalledTimes(0);
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -3309,7 +3324,7 @@ describe('usePaginationFragment', () => {
     describe('refetch', () => {
       // The bulk of refetch behavior is covered in useRefetchableFragmentNode-test,
       // so this suite covers the pagination-related test cases.
-      function expectRefetchRequestIsInFlight(expected: {|
+      function expectRefetchRequestIsInFlight(expected: {
         data: mixed,
         gqlRefetchQuery?: any,
         hasNext: boolean,
@@ -3318,30 +3333,31 @@ describe('usePaginationFragment', () => {
         refetchQuery?: OperationDescriptor,
         refetchVariables: Variables,
         requestCount: number,
-      |}) {
+      }) {
         // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        expect(environment.executeWithSource).toBeCalledTimes(
-          expected.requestCount,
-        );
-        expect(
-          environment.mock.isLoading(
-            expected.gqlRefetchQuery ?? gqlPaginationQuery,
-            expected.refetchVariables,
-            {force: true},
-          ),
-        ).toEqual(expected.inFlight);
+        expect(fetch).toBeCalledTimes(expected.requestCount);
+        const fetchCall = fetch.mock.calls.find(call => {
+          return (
+            call[0] ===
+              (expected.gqlRefetchQuery ?? gqlPaginationQuery).params &&
+            areEqual(call[1], expected.refetchVariables) &&
+            areEqual(call[2], {force: true})
+          );
+        });
+        const isInFlight = fetchCall != null;
+        expect(isInFlight).toEqual(expected.inFlight);
       }
 
       function expectFragmentIsRefetching(
         renderer: any,
-        expected: {|
+        expected: {
           data: mixed,
           hasNext: boolean,
           hasPrevious: boolean,
           refetchVariables: Variables,
           refetchQuery?: OperationDescriptor,
           gqlRefetchQuery?: $FlowFixMe,
-        |},
+        },
       ) {
         expect(renderSpy).toBeCalledTimes(0);
         renderSpy.mockClear();
@@ -3409,7 +3425,7 @@ describe('usePaginationFragment', () => {
         });
 
         // Mock network response
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -3529,7 +3545,7 @@ describe('usePaginationFragment', () => {
         });
 
         // Mock network response
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -3668,7 +3684,10 @@ describe('usePaginationFragment', () => {
           },
         };
 
-        const renderer = renderFragment({owner: queryNestedFragment, userRef});
+        const renderer = renderFragment({
+          owner: queryNestedFragment,
+          userRef,
+        });
         expectFragmentResults([
           {
             data: initialUser,
@@ -3711,7 +3730,7 @@ describe('usePaginationFragment', () => {
         });
 
         // Mock network response
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -3831,7 +3850,7 @@ describe('usePaginationFragment', () => {
         });
 
         // Mock network response
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -3910,7 +3929,7 @@ describe('usePaginationFragment', () => {
 
         // Paginate after refetching
         // $FlowFixMe[method-unbinding] added when improving typing for this parameters
-        environment.execute.mockClear();
+        fetch.mockClear();
         TestRenderer.act(() => {
           loadNext(1);
         });
@@ -3932,7 +3951,7 @@ describe('usePaginationFragment', () => {
           gqlPaginationQuery,
         });
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             node: {
               __typename: 'User',
@@ -4122,7 +4141,7 @@ describe('usePaginationFragment', () => {
         });
         expect(callback).toBeCalledTimes(0);
 
-        environment.mock.resolve(gqlPaginationQuery, {
+        resolveQuery({
           data: {
             fetch__NonNodeStory: {
               id: 'a',

@@ -6,14 +6,13 @@
  *
  * @flow
  * @format
+ * @oncall relay
  */
 
 /**
  * Run a test suite under multiple sets of feature flags.
  * Beware that calling jest.resetModules() within the suite may break this.
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 

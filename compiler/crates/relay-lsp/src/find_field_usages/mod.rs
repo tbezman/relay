@@ -5,22 +5,36 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use crate::{
-    location::transform_relay_location_to_lsp_location, server::GlobalState, LSPRuntimeError,
-    LSPRuntimeResult,
-};
-use common::{Location as IRLocation, WithLocation};
-use graphql_ir::{
-    FragmentDefinition, InlineFragment, LinkedField, OperationDefinition, Program, ScalarField,
-    Visitor,
-};
-use intern::string_key::{Intern, StringKey};
-use itertools::Itertools;
-use lsp_types::request::Request;
-use schema::{FieldID, SDLSchema, Schema, Type};
-use serde::{Deserialize, Serialize};
+mod find_field_locations;
+
 use std::collections::HashMap;
 use std::sync::Arc;
+
+use common::Location as IRLocation;
+use common::WithLocation;
+pub(crate) use find_field_locations::find_field_locations;
+use graphql_ir::FragmentDefinition;
+use graphql_ir::InlineFragment;
+use graphql_ir::LinkedField;
+use graphql_ir::OperationDefinition;
+use graphql_ir::Program;
+use graphql_ir::ScalarField;
+use graphql_ir::Visitor;
+use intern::string_key::Intern;
+use intern::string_key::StringKey;
+use itertools::Itertools;
+use lsp_types::request::Request;
+use schema::FieldID;
+use schema::SDLSchema;
+use schema::Schema;
+use schema::Type;
+use serde::Deserialize;
+use serde::Serialize;
+
+use crate::location::transform_relay_location_to_lsp_location;
+use crate::server::GlobalState;
+use crate::LSPRuntimeError;
+use crate::LSPRuntimeResult;
 
 // This implementation of FindFieldUsages find matching fields in:
 //   - exact type matches
@@ -68,7 +82,7 @@ pub fn on_find_field_usages(
     let program = state.get_program(&schema_name)?;
     let root_dir = &state.root_dir();
 
-    let ir_locations = get_usages(&program, schema, type_name, field_name)?;
+    let ir_locations = get_usages(&program, &schema, type_name, field_name)?;
     let lsp_locations = ir_locations
         .into_iter()
         .map(|(label, ir_location)| {
@@ -87,7 +101,7 @@ pub fn on_find_field_usages(
 
 pub fn get_usages(
     program: &Program,
-    schema: Arc<SDLSchema>,
+    schema: &Arc<SDLSchema>,
     type_name: StringKey,
     field_name: StringKey,
 ) -> LSPRuntimeResult<Vec<(String, IRLocation)>> {
@@ -121,16 +135,20 @@ struct FieldUsageFinderScope {
     label: Option<StringKey>,
 }
 
-struct FieldUsageFinder {
+pub(crate) struct FieldUsageFinder<'schema> {
     usages: HashMap<StringKey, Vec<IRLocation>>,
-    schema: Arc<SDLSchema>,
+    schema: &'schema Arc<SDLSchema>,
     type_: Type,
     field_name: StringKey,
     current_scope: FieldUsageFinderScope,
 }
 
-impl FieldUsageFinder {
-    fn new(schema: Arc<SDLSchema>, type_: Type, field_name: StringKey) -> FieldUsageFinder {
+impl<'schema> FieldUsageFinder<'schema> {
+    pub(crate) fn new(
+        schema: &'schema Arc<SDLSchema>,
+        type_: Type,
+        field_name: StringKey,
+    ) -> FieldUsageFinder<'schema> {
         FieldUsageFinder {
             usages: Default::default(),
             schema,
@@ -139,6 +157,7 @@ impl FieldUsageFinder {
             current_scope: Default::default(),
         }
     }
+
     fn match_field(&mut self, field: &WithLocation<FieldID>) -> bool {
         // check field name match
         if self.schema.field(field.item).name.item == self.field_name {
@@ -156,6 +175,7 @@ impl FieldUsageFinder {
         }
         false
     }
+
     fn add_field(&mut self, field: &WithLocation<FieldID>) {
         let current_label = self
             .current_scope
@@ -166,9 +186,18 @@ impl FieldUsageFinder {
             .or_default()
             .push(field.location);
     }
+
+    pub(crate) fn get_locations(&self) -> Vec<IRLocation> {
+        self.usages
+            .values()
+            .into_iter()
+            .flatten()
+            .copied()
+            .collect_vec()
+    }
 }
 
-impl Visitor for FieldUsageFinder {
+impl Visitor for FieldUsageFinder<'_> {
     const NAME: &'static str = "FieldUsageFinder";
     const VISIT_ARGUMENTS: bool = false;
     const VISIT_DIRECTIVES: bool = false;
@@ -178,7 +207,7 @@ impl Visitor for FieldUsageFinder {
         //  before recursively visiting the operation's selections
         assert!(self.current_scope.label.is_none());
         assert!(self.current_scope.types.is_empty());
-        self.current_scope.label = Some(operation.name.item);
+        self.current_scope.label = Some(operation.name.item.0);
         self.current_scope
             .types
             .push(self.schema.get_type_name(operation.type_));
@@ -194,7 +223,7 @@ impl Visitor for FieldUsageFinder {
         assert!(self.current_scope.label.is_none());
         assert!(self.current_scope.types.is_empty());
 
-        self.current_scope.label = Some(fragment.name.item);
+        self.current_scope.label = Some(fragment.name.item.0);
         self.current_scope
             .types
             .push(self.schema.get_type_name(fragment.type_condition));

@@ -5,11 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict-local
- * @emails oncall+relay
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -37,11 +35,12 @@ const warning = require('warning');
 
 const CACHE_CAPACITY = 1000;
 const DEFAULT_FETCH_POLICY = 'store-or-network';
+const DEFAULT_LIVE_FETCH_POLICY = 'store-and-network';
 
 export type QueryResource = QueryResourceImpl;
 
 type QueryResourceCache = Cache<QueryResourceCacheEntry>;
-type QueryResourceCacheEntry = {|
+type QueryResourceCacheEntry = {
   +id: number,
   +cacheIdentifier: string,
   +operationAvailability: ?OperationAvailability,
@@ -56,17 +55,17 @@ type QueryResourceCacheEntry = {|
   temporaryRetain(environment: IEnvironment): Disposable,
   permanentRetain(environment: IEnvironment): Disposable,
   releaseTemporaryRetain(): void,
-|};
+};
 export opaque type QueryResult: {
   fragmentNode: ReaderFragment,
   fragmentRef: mixed,
   ...
-} = {|
+} = {
   cacheIdentifier: string,
   fragmentNode: ReaderFragment,
   fragmentRef: mixed,
   operation: OperationDescriptor,
-|};
+};
 
 const WEAKMAP_SUPPORTED = typeof WeakMap === 'function';
 interface IMap<K, V> {
@@ -85,7 +84,11 @@ function getQueryCacheIdentifier(
   maybeRenderPolicy: ?RenderPolicy,
   cacheBreaker?: ?string | ?number,
 ): string {
-  const fetchPolicy = maybeFetchPolicy ?? DEFAULT_FETCH_POLICY;
+  const fetchPolicy =
+    maybeFetchPolicy ??
+    (operationIsLiveQuery(operation)
+      ? DEFAULT_LIVE_FETCH_POLICY
+      : DEFAULT_FETCH_POLICY);
   const renderPolicy =
     maybeRenderPolicy ?? environment.UNSTABLE_getDefaultRenderPolicy();
   const cacheIdentifier = `${fetchPolicy}-${renderPolicy}-${operation.request.identifier}`;
@@ -129,23 +132,36 @@ function createCacheEntry(
   let currentValue: Error | Promise<void> | QueryResult = value;
   let currentNetworkSubscription: ?Subscription = networkSubscription;
 
-  const suspenseResource = new SuspenseResource(environment => {
-    const retention = environment.retain(operation);
-    return {
-      dispose: () => {
-        // Normally if this entry never commits, the request would've ended by the
-        // time this timeout expires and the temporary retain is released. However,
-        // we need to do this for live queries which remain open indefinitely.
-        if (isLiveQuery && currentNetworkSubscription != null) {
-          currentNetworkSubscription.unsubscribe();
-        }
-        retention.dispose();
-        onDispose(cacheEntry);
-      },
-    };
-  });
+  const suspenseResource: SuspenseResource = new SuspenseResource(
+    environment => {
+      const retention = environment.retain(operation);
+      return {
+        dispose: () => {
+          // Normally if this entry never commits, the request would've ended by the
+          // time this timeout expires and the temporary retain is released. However,
+          // we need to do this for live queries which remain open indefinitely.
+          if (isLiveQuery && currentNetworkSubscription != null) {
+            currentNetworkSubscription.unsubscribe();
+          }
+          retention.dispose();
+          onDispose(cacheEntry);
+        },
+      };
+    },
+  );
 
-  const cacheEntry = {
+  const cacheEntry: {
+    cacheIdentifier: string,
+    getValue(): QueryResult | Promise<void> | Error,
+    id: number,
+    operationAvailability: ?OperationAvailability,
+    permanentRetain(environment: IEnvironment): Disposable,
+    processedPayloadsCount: number,
+    releaseTemporaryRetain(): void,
+    setNetworkSubscription(subscription: ?Subscription): void,
+    setValue(val: QueryResult | Promise<void> | Error): void,
+    temporaryRetain(environment: IEnvironment): Disposable,
+  } = {
     cacheIdentifier,
     id: nextID++,
     processedPayloadsCount: 0,
@@ -227,7 +243,11 @@ class QueryResourceImpl {
     profilerContext: mixed,
   ): QueryResult {
     const environment = this._environment;
-    const fetchPolicy = maybeFetchPolicy ?? DEFAULT_FETCH_POLICY;
+    const fetchPolicy =
+      maybeFetchPolicy ??
+      (operationIsLiveQuery(operation)
+        ? DEFAULT_LIVE_FETCH_POLICY
+        : DEFAULT_FETCH_POLICY);
     const renderPolicy =
       maybeRenderPolicy ?? environment.UNSTABLE_getDefaultRenderPolicy();
 

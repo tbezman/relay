@@ -6,15 +6,15 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
 import type {GraphQLTaggedNode} from '../query/GraphQLTag';
 import type {FragmentType, SingularReaderSelector} from './RelayStoreTypes';
 import type {ResolverFragmentResult} from './ResolverCache';
+import type {Fragment} from '../util/RelayRuntimeTypes';
 
 const {getFragment} = require('../query/GraphQLTag');
 const {getSelector} = require('./RelayModernSelector');
@@ -24,12 +24,12 @@ const invariant = require('invariant');
 // `readFragment`, but that's a global function -- it needs information
 // about what resolver is being executed, which is supplied by putting the
 // info on this stack before we call the resolver function.
-type ResolverContext = {|
+type ResolverContext = {
   getDataForResolverFragment: (
     SingularReaderSelector,
     FragmentType,
   ) => ResolverFragmentResult,
-|};
+};
 const contextStack: Array<ResolverContext> = [];
 
 function withResolverContext<T>(context: ResolverContext, cb: () => T): T {
@@ -98,6 +98,11 @@ declare function readFragment<
   ) => ?TFragmentData,
   TKey,
 >;
+
+declare function readFragment<TKey: FragmentType, TData>(
+  fragmentInput: Fragment<TKey, TData>,
+  fragmentKey: TKey,
+): TData;
 
 function readFragment(
   fragmentInput: GraphQLTaggedNode,

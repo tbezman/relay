@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -61,9 +59,9 @@ describe('useQueryLoader', () => {
     releaseQuery = undefined;
     environment = createMockEnvironment();
     render = function (
-      initialPreloadedQuery: void | {|
+      initialPreloadedQuery: void | {
         releaseQuery: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
-      |},
+      },
     ) {
       renderCount = 0;
       ReactTestRenderer.act(() => {
@@ -74,9 +72,9 @@ describe('useQueryLoader', () => {
     };
 
     update = function (
-      initialPreloadedQuery: void | {|
+      initialPreloadedQuery: void | {
         releaseQuery: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
-      |},
+      },
     ) {
       ReactTestRenderer.act(() => {
         instance.update(
@@ -87,13 +85,13 @@ describe('useQueryLoader', () => {
 
     const Inner = function ({
       initialPreloadedQuery,
-    }: {|
-      initialPreloadedQuery: void | {|
+    }: {
+      initialPreloadedQuery: void | {
         releaseQuery: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
-      |},
-    |}) {
+      },
+    }) {
       renderCount = (renderCount || 0) + 1;
-      [loadedQuery, queryLoaderCallback, disposeQuery] = useQueryLoader(
+      [loadedQuery, queryLoaderCallback, disposeQuery] = useQueryLoader<any>(
         generatedQuery,
         // $FlowExpectedError[incompatible-call] it's ok to pass our fake preloaded query here
         initialPreloadedQuery,
@@ -103,11 +101,11 @@ describe('useQueryLoader', () => {
 
     Container = function ({
       initialPreloadedQuery,
-    }: {|
-      initialPreloadedQuery?: void | {|
+    }: {
+      initialPreloadedQuery?: void | {
         releaseQuery: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
-      |},
-    |}) {
+      },
+    }) {
       return (
         <RelayEnvironmentProvider environment={environment}>
           <Inner initialPreloadedQuery={initialPreloadedQuery} />
@@ -404,7 +402,7 @@ describe('useQueryLoader', () => {
         );
       }
 
-      function Router({route}: {|route: 'FIRST' | 'SECOND'|}) {
+      function Router({route}: {route: 'FIRST' | 'SECOND'}) {
         if (route === 'FIRST') {
           return <ComponentWithQuery />;
         } else {
@@ -478,7 +476,7 @@ describe('useQueryLoader', () => {
         );
       }
 
-      function InnerConcurrent({promise}: {|promise: ?Promise<any>|}) {
+      function InnerConcurrent({promise}: {promise: ?Promise<any>}) {
         [, queryLoaderCallback] = useQueryLoader(generatedQuery);
         if (
           promise == null ||
@@ -576,7 +574,7 @@ describe('useQueryLoader', () => {
       }
 
       let innerUnsuspendedCorrectly = false;
-      function InnerConcurrent({promise}: {|promise: ?Promise<any>|}) {
+      function InnerConcurrent({promise}: {promise: ?Promise<any>}) {
         [, queryLoaderCallback] = useQueryLoader(generatedQuery);
         if (
           promise == null ||

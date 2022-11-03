@@ -6,9 +6,8 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -35,26 +34,26 @@ type OnDataChange = ({
 }) => void;
 
 /** The external API of 'fetch' **/
-export type FetchOptions = {|
+export type FetchOptions = {
   environment: IEnvironment,
   onDataChange?: null | OnDataChange,
   operation: OperationDescriptor,
-|};
+};
 
 // Internally we keep an array of onDataChange callbacks, to support reusing
 // the queryRenderer for multiple components.
-type FetchOptionsInternal = {|
+type FetchOptionsInternal = {
   environment: IEnvironment,
   onDataChangeCallbacks: Array<OnDataChange>,
   operation: OperationDescriptor,
-|};
+};
 
-export type ExecuteConfig = {|
+export type ExecuteConfig = {
   environment: IEnvironment,
   operation: OperationDescriptor,
   // Allows pagination container to retain results from previous queries
   preservePreviousReferences?: boolean,
-|};
+};
 
 class ReactRelayQueryFetcher {
   _fetchOptions: ?FetchOptionsInternal;
@@ -77,10 +76,10 @@ class ReactRelayQueryFetcher {
     }
   }
 
-  getSelectionReferences(): {|
+  getSelectionReferences(): {
     cacheSelectionReference: ?Disposable,
     selectionReferences: Array<Disposable>,
-  |} {
+  } {
     return {
       cacheSelectionReference: this._cacheSelectionReference,
       selectionReferences: this._selectionReferences,
@@ -321,7 +320,7 @@ class ReactRelayQueryFetcher {
   }: {
     notifyFirstResult: boolean,
     ...
-  }) {
+  }): void {
     invariant(
       this._fetchOptions,
       'ReactRelayQueryFetcher: `_onQueryDataAvailable` should have been called after having called `fetch`',

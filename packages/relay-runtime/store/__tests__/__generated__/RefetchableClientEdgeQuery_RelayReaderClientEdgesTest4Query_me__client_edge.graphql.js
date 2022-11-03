@@ -4,7 +4,9 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<078892a091190acf3b97d624631d27be>>
+ * @oncall relay
+ *
+ * @generated SignedSource<<1347f7d7434c2d1f1f673d552935009a>>
  * @flow
  * @lightSyntaxTransform
  * @nogrep
@@ -16,7 +18,14 @@
 
 /*::
 import type { ReaderFragment, RefetchableFragment } from 'relay-runtime';
+import type { UserAnotherClientEdgeResolver$key } from "./../resolvers/__generated__/UserAnotherClientEdgeResolver.graphql";
 import type { FragmentType } from "relay-runtime";
+import {another_client_edge as userAnotherClientEdgeResolver} from "../resolvers/UserAnotherClientEdgeResolver.js";
+// Type assertion validating that `userAnotherClientEdgeResolver` resolver is correctly implemented.
+// A type error here indicates that the type signature of the resolver module is incorrect.
+(userAnotherClientEdgeResolver: (
+  rootKey: UserAnotherClientEdgeResolver$key, 
+) => mixed);
 declare export opaque type RefetchableClientEdgeQuery_RelayReaderClientEdgesTest4Query_me__client_edge$fragmentType: FragmentType;
 type ClientEdgeQuery_RelayReaderClientEdgesTest4Query_me__client_edge$variables = any;
 export type RefetchableClientEdgeQuery_RelayReaderClientEdgesTest4Query_me__client_edge$data = {|
@@ -62,7 +71,7 @@ var node/*: ReaderFragment*/ = {
         },
         "kind": "RelayResolver",
         "name": "another_client_edge",
-        "resolverModule": require('./../resolvers/UserAnotherClientEdgeResolver.js'),
+        "resolverModule": require('./../resolvers/UserAnotherClientEdgeResolver').another_client_edge,
         "path": "another_client_edge"
       },
       "linkedField": {

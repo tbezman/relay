@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 import type {
@@ -186,18 +184,18 @@ describe.each([
     });
 
     // Set up renderers
-    SingularRenderer = (props: {|
+    SingularRenderer = (props: {
       user: ?(
         | useFragmentTestUserFragment$data
         | useFragmentTestUsersFragment$data
       ),
-    |}) => null;
-    PluralRenderer = (props: {|
+    }) => null;
+    PluralRenderer = (props: {
       users: ?(
         | useFragmentTestUserFragment$data
         | useFragmentTestUsersFragment$data
       ),
-    |}) => null;
+    }) => null;
     const SingularContainer = (props: {
       userRef?: {$data?: {...}, ...},
       owner: $FlowFixMe,
@@ -223,7 +221,6 @@ describe.each([
       owner: $FlowFixMe,
       ...
     }) => {
-      // We need a render a component to run a Hook
       const owner = props.owner;
       const usersRef = props.hasOwnProperty('usersRef')
         ? props.usersRef
@@ -240,7 +237,7 @@ describe.each([
     };
 
     const relayContext = {environment};
-    ContextProvider = ({children}: {|children: React.Node|}) => {
+    ContextProvider = ({children}: {children: React.Node}) => {
       return (
         <ReactRelayContext.Provider value={relayContext}>
           {children}
@@ -343,5 +340,17 @@ describe.each([
     expect(renderSpy).toBeCalledTimes(2);
     const actualData2 = renderSpy.mock.calls[1][0];
     expect(actualData).toBe(actualData2);
+  });
+
+  it('Returns [] when the fragment ref is [] (for plural fragments)', () => {
+    const container = renderPluralFragment({usersRef: []});
+    assertFragmentResults([]);
+    container.unmount();
+  });
+
+  it('Returns null when the fragment ref is null (for plural fragments)', () => {
+    const container = renderPluralFragment({usersRef: null});
+    assertFragmentResults(null);
+    container.unmount();
   });
 });

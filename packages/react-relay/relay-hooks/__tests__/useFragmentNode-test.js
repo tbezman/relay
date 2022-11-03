@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -90,11 +88,11 @@ function expectSchedulerToFlushAndYieldThrough(expectedYields: any) {
 // The current tests are against useFragmentNode which as a different Flow signature
 // than the external API useFragment. I want to keep the more accurate types
 // for useFragmentInternal_REACT_CACHE, though, so this wrapper adapts it.
-type ReturnType<TFragmentData: mixed> = {|
+type ReturnType<TFragmentData: mixed> = {
   data: TFragmentData,
   disableStoreUpdates: () => void,
   enableStoreUpdates: () => void,
-|};
+};
 function useFragmentNode_REACT_CACHE<TFragmentData: mixed>(
   fragment:
     | Fragment<
@@ -170,7 +168,7 @@ describe.each([
           >,
       fragmentRef: any,
     ) {
-      const result = useFragmentNodeOriginal(
+      const result = useFragmentNodeOriginal<any>(
         fragmentNode,
         fragmentRef,
         'TestDisplayName',
@@ -187,7 +185,7 @@ describe.each([
     }
 
     function assertFragmentResults(
-      expectedCalls: $ReadOnlyArray<{|data: $FlowFixMe|}>,
+      expectedCalls: $ReadOnlyArray<{data: $FlowFixMe}>,
     ) {
       // the issue is that the initial miss-updates-on-subscribe thing is
       // only on the second runAllImmediates here.
@@ -206,7 +204,7 @@ describe.each([
     /// * items 0..length-1 (for length > 1) are calls expected to be rendered, but not committed
     /// * item length-1 is expected to be rendered and committed
     function assertRenderBatch(
-      expectedCalls: $ReadOnlyArray<{|data: $FlowFixMe|}>,
+      expectedCalls: $ReadOnlyArray<{data: $FlowFixMe}>,
     ) {
       expect(expectedCalls.length >= 1).toBeTruthy(); // must expect at least one value
 
@@ -340,8 +338,8 @@ describe.each([
       });
 
       // Set up renderers
-      SingularRenderer = (props: {|user: any|}) => null;
-      PluralRenderer = (props: {|users: any|}) => null;
+      SingularRenderer = (props: {user: any}) => null;
+      PluralRenderer = (props: {users: any}) => null;
 
       const SingularContainer = (props: {
         userRef?: {...},
@@ -391,7 +389,7 @@ describe.each([
         return <PluralRenderer users={usersData} />;
       };
 
-      const ContextProvider = ({children}: {|children: React.Node|}) => {
+      const ContextProvider = ({children}: {children: React.Node}) => {
         const [env, _setEnv] = useState(environment);
         const relayContext = useMemo(() => ({environment: env}), [env]);
 
@@ -1488,6 +1486,57 @@ describe.each([
           },
         ]);
       });
+    });
+
+    it('should not suspend when data goes missing due to store changes after it has committed (starting with no data missing)', () => {
+      const renderer = renderSingularFragment();
+      internalAct(() => {
+        // Let there be an operation in flight:
+        fetchQuery(environment, singularQuery).subscribe({});
+        // And let there be missing data:
+        environment.commitUpdate(store => {
+          store.get('1')?.setValue(undefined, 'name');
+        });
+      });
+      // Nonetheless, once the component has mounted, it only suspends if the fragment ref changes,
+      // not because of data being deleted from the store:
+      expect(renderer.toJSON()).toEqual(null); // null means it rendered successfully and didn't suspend
+    });
+
+    it('should not suspend when data goes missing due to store changes after it has committed (starting with data missing already)', () => {
+      const missingDataVariables = {...pluralVariables, ids: ['4']};
+      const missingDataQuery = createOperationDescriptor(
+        gqlPluralQuery,
+        missingDataVariables,
+      );
+      environment.commitPayload(
+        createOperationDescriptor(
+          gqlPluralMissingDataQuery,
+          missingDataVariables,
+        ),
+        {
+          nodes: [
+            {
+              __typename: 'User',
+              id: '4',
+            },
+          ],
+        },
+      );
+
+      const renderer = renderPluralFragment({owner: missingDataQuery});
+
+      internalAct(() => {
+        // Let there be an operation in flight:
+        fetchQuery(environment, missingDataQuery).subscribe({});
+        // And let there be missing data:
+        environment.commitUpdate(store => {
+          store.get('4')?.setValue(undefined, 'name');
+        });
+      });
+      // Nonetheless, once the component has mounted, it only suspends if the fragment ref changes,
+      // not because of data being deleted from the store:
+      expect(renderer.toJSON()).toEqual(null); // null means it rendered successfully and didn't suspend
     });
 
     it('checks for missed updates, subscribing to the latest snapshot even if fragment data is unchanged', () => {

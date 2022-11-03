@@ -6,10 +6,8 @@
  *
  * @flow strict-local
  * @format
- * @emails oncall+relay
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -129,7 +127,10 @@ if (__DEV__) {
     return [recordFormatter, recordEntryFormatter];
   };
 
-  const getWrappedRecord = (source: RecordSource, dataID: string) => {
+  const getWrappedRecord = (
+    source: RecordSource,
+    dataID: string,
+  ): ?{[string]: mixed} => {
     const record = source.get(dataID);
     if (record == null) {
       return record;

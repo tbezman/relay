@@ -6,9 +6,8 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -17,7 +16,10 @@ import type {
   NormalizationLocalArgumentDefinition,
   NormalizationOperation,
 } from '../util/NormalizationNode';
-import type {ReaderFragment} from '../util/ReaderNode';
+import type {
+  ReaderFragment,
+  ReaderInlineDataFragmentSpread,
+} from '../util/ReaderNode';
 import type {ProvidedVariablesType} from '../util/RelayConcreteNode';
 import type {Variables} from '../util/RelayRuntimeTypes';
 
@@ -32,10 +34,16 @@ const invariant = require('invariant');
  * Note that this is analagous to determining function arguments given a function call.
  */
 function getFragmentVariables(
-  fragment: ReaderFragment,
+  fragment: ReaderFragment | ReaderInlineDataFragmentSpread,
   rootVariables: Variables,
   argumentVariables: Variables,
 ): Variables {
+  // TODO: Support for legacy ReaderInlineDataFragmentSpread nodes.
+  // Remove this once all we've updated the ReaderInlineDataFragmentSpread
+  // type to indicate that all compiled artifacts have been updated.
+  if (fragment.argumentDefinitions == null) {
+    return argumentVariables;
+  }
   let variables;
   fragment.argumentDefinitions.forEach(definition => {
     if (argumentVariables.hasOwnProperty(definition.name)) {

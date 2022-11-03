@@ -5,46 +5,106 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use ::intern::{
-    intern,
-    string_key::{Intern, StringKey},
-};
-use common::NamedItem;
-use graphql_ir::{
-    Condition, Directive, FragmentSpread, InlineFragment, LinkedField, OperationDefinition,
-    ScalarField, Selection,
-};
-use indexmap::{map::Entry, IndexMap, IndexSet};
-use relay_config::{CustomScalarType, CustomScalarTypeImport};
-use relay_transforms::{
-    FragmentAliasMetadata, ModuleMetadata, NoInlineFragmentSpreadMetadata, RelayResolverMetadata,
-    RequiredMetadataDirective, TypeConditionInfo, ASSIGNABLE_DIRECTIVE_FOR_TYPEGEN,
-    CHILDREN_CAN_BUBBLE_METADATA_KEY, CLIENT_EXTENSION_DIRECTIVE_NAME,
-    RELAY_ACTOR_CHANGE_DIRECTIVE_FOR_CODEGEN, UPDATABLE_DIRECTIVE_FOR_TYPEGEN,
-};
-use schema::{EnumID, SDLSchema, ScalarID, Schema, Type, TypeReference};
 use std::hash::Hash;
+use std::path::PathBuf;
 
-use crate::{
-    type_selection::{
-        ModuleDirective, RawResponseFragmentSpread, ScalarFieldSpecialSchemaField, TypeSelection,
-        TypeSelectionFragmentSpread, TypeSelectionInlineFragment, TypeSelectionKey,
-        TypeSelectionLinkedField, TypeSelectionMap, TypeSelectionScalarField,
-    },
-    typegen_state::{
-        ActorChangeStatus, EncounteredEnums, EncounteredFragment, EncounteredFragments,
-        GeneratedInputObject, ImportedRawResponseTypes, ImportedResolver, ImportedResolvers,
-        InputObjectTypes, MatchFields, RuntimeImports,
-    },
-    write::CustomScalarsImports,
-    writer::{
-        ExactObject, FunctionTypeAssertion, GetterSetterPairProp, InexactObject, KeyValuePairProp,
-        Prop, SortedASTList, SortedStringKeyList, SpreadProp, StringLiteral, AST,
-    },
-    MaskStatus, TypegenContext, FRAGMENT_PROP_NAME, KEY_FRAGMENT_SPREADS, KEY_FRAGMENT_TYPE,
-    KEY_UPDATABLE_FRAGMENT_SPREADS, MODULE_COMPONENT, RESPONSE, TYPE_BOOLEAN, TYPE_FLOAT, TYPE_ID,
-    TYPE_INT, TYPE_STRING, VARIABLES,
-};
+use ::intern::intern;
+use ::intern::string_key::Intern;
+use ::intern::string_key::StringKey;
+use ::intern::Lookup;
+use common::ArgumentName;
+use common::DirectiveName;
+use common::NamedItem;
+use graphql_ir::Condition;
+use graphql_ir::Directive;
+use graphql_ir::FragmentDefinitionName;
+use graphql_ir::FragmentSpread;
+use graphql_ir::InlineFragment;
+use graphql_ir::LinkedField;
+use graphql_ir::OperationDefinition;
+use graphql_ir::ScalarField;
+use graphql_ir::Selection;
+use indexmap::map::Entry;
+use indexmap::IndexMap;
+use indexmap::IndexSet;
+use relay_config::CustomScalarType;
+use relay_config::CustomScalarTypeImport;
+use relay_config::TypegenLanguage;
+use relay_schema::CUSTOM_SCALAR_DIRECTIVE_NAME;
+use relay_schema::EXPORT_NAME_CUSTOM_SCALAR_ARGUMENT_NAME;
+use relay_schema::PATH_CUSTOM_SCALAR_ARGUMENT_NAME;
+use relay_transforms::ClientEdgeMetadata;
+use relay_transforms::FragmentAliasMetadata;
+use relay_transforms::FragmentDataInjectionMode;
+use relay_transforms::ModuleMetadata;
+use relay_transforms::NoInlineFragmentSpreadMetadata;
+use relay_transforms::RelayResolverMetadata;
+use relay_transforms::RequiredMetadataDirective;
+use relay_transforms::ResolverOutputTypeInfo;
+use relay_transforms::TypeConditionInfo;
+use relay_transforms::ASSIGNABLE_DIRECTIVE_FOR_TYPEGEN;
+use relay_transforms::CHILDREN_CAN_BUBBLE_METADATA_KEY;
+use relay_transforms::CLIENT_EXTENSION_DIRECTIVE_NAME;
+use relay_transforms::RELAY_ACTOR_CHANGE_DIRECTIVE_FOR_CODEGEN;
+use relay_transforms::UPDATABLE_DIRECTIVE_FOR_TYPEGEN;
+use schema::EnumID;
+use schema::Field;
+use schema::SDLSchema;
+use schema::ScalarID;
+use schema::Schema;
+use schema::Type;
+use schema::TypeReference;
+
+use crate::type_selection::ModuleDirective;
+use crate::type_selection::RawResponseFragmentSpread;
+use crate::type_selection::ScalarFieldSpecialSchemaField;
+use crate::type_selection::TypeSelection;
+use crate::type_selection::TypeSelectionFragmentSpread;
+use crate::type_selection::TypeSelectionInlineFragment;
+use crate::type_selection::TypeSelectionKey;
+use crate::type_selection::TypeSelectionLinkedField;
+use crate::type_selection::TypeSelectionMap;
+use crate::type_selection::TypeSelectionScalarField;
+use crate::typegen_state::ActorChangeStatus;
+use crate::typegen_state::EncounteredEnums;
+use crate::typegen_state::EncounteredFragment;
+use crate::typegen_state::EncounteredFragments;
+use crate::typegen_state::GeneratedInputObject;
+use crate::typegen_state::ImportedRawResponseTypes;
+use crate::typegen_state::ImportedResolver;
+use crate::typegen_state::ImportedResolverName;
+use crate::typegen_state::ImportedResolvers;
+use crate::typegen_state::InputObjectTypes;
+use crate::typegen_state::MatchFields;
+use crate::typegen_state::RuntimeImports;
+use crate::write::CustomScalarsImports;
+use crate::writer::ExactObject;
+use crate::writer::FunctionTypeAssertion;
+use crate::writer::GetterSetterPairProp;
+use crate::writer::InexactObject;
+use crate::writer::KeyValuePairProp;
+use crate::writer::Prop;
+use crate::writer::SortedASTList;
+use crate::writer::SortedStringKeyList;
+use crate::writer::SpreadProp;
+use crate::writer::StringLiteral;
+use crate::writer::AST;
+use crate::MaskStatus;
+use crate::TypegenContext;
+use crate::FRAGMENT_PROP_NAME;
+use crate::KEY_FRAGMENT_SPREADS;
+use crate::KEY_FRAGMENT_TYPE;
+use crate::KEY_UPDATABLE_FRAGMENT_SPREADS;
+use crate::LIVE_STATE_TYPE;
+use crate::MODULE_COMPONENT;
+use crate::RESPONSE;
+use crate::TYPE_BOOLEAN;
+use crate::TYPE_FLOAT;
+use crate::TYPE_ID;
+use crate::TYPE_INT;
+use crate::TYPE_RELAY_RESOLVER_VALUE;
+use crate::TYPE_STRING;
+use crate::VARIABLES;
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn visit_selections(
@@ -52,10 +112,12 @@ pub(crate) fn visit_selections(
     selections: &[Selection],
     input_object_types: &mut InputObjectTypes,
     encountered_enums: &mut EncounteredEnums,
+    imported_raw_response_types: &mut ImportedRawResponseTypes,
     encountered_fragments: &mut EncounteredFragments,
     imported_resolvers: &mut ImportedResolvers,
     actor_change_status: &mut ActorChangeStatus,
     custom_scalars: &mut CustomScalarsImports,
+    runtime_imports: &mut RuntimeImports,
     enclosing_linked_field_concrete_type: Option<Type>,
 ) -> Vec<TypeSelection> {
     let mut type_selections = Vec::new();
@@ -68,8 +130,10 @@ pub(crate) fn visit_selections(
                 input_object_types,
                 encountered_enums,
                 custom_scalars,
+                imported_raw_response_types,
                 encountered_fragments,
                 imported_resolvers,
+                runtime_imports,
             ),
             Selection::InlineFragment(inline_fragment) => visit_inline_fragment(
                 typegen_context,
@@ -77,10 +141,12 @@ pub(crate) fn visit_selections(
                 inline_fragment,
                 input_object_types,
                 encountered_enums,
+                imported_raw_response_types,
                 encountered_fragments,
                 imported_resolvers,
                 actor_change_status,
                 custom_scalars,
+                runtime_imports,
                 enclosing_linked_field_concrete_type,
             ),
             Selection::LinkedField(linked_field) => {
@@ -105,10 +171,12 @@ pub(crate) fn visit_selections(
                             selections,
                             input_object_types,
                             encountered_enums,
+                            imported_raw_response_types,
                             encountered_fragments,
                             imported_resolvers,
                             actor_change_status,
                             custom_scalars,
+                            runtime_imports,
                             nested_enclosing_linked_field_concrete_type,
                         )
                     },
@@ -124,7 +192,9 @@ pub(crate) fn visit_selections(
                         input_object_types,
                         encountered_enums,
                         custom_scalars,
+                        imported_raw_response_types,
                         encountered_fragments,
+                        runtime_imports,
                         &mut type_selections,
                         resolver_metadata,
                         RequiredMetadataDirective::find(&scalar_field.directives).is_some(),
@@ -147,10 +217,12 @@ pub(crate) fn visit_selections(
                 condition,
                 input_object_types,
                 encountered_enums,
+                imported_raw_response_types,
                 encountered_fragments,
                 imported_resolvers,
                 actor_change_status,
                 custom_scalars,
+                runtime_imports,
                 enclosing_linked_field_concrete_type,
             ),
         }
@@ -166,8 +238,10 @@ fn visit_fragment_spread(
     input_object_types: &mut InputObjectTypes,
     encountered_enums: &mut EncounteredEnums,
     custom_scalars: &mut CustomScalarsImports,
+    imported_raw_response_types: &mut ImportedRawResponseTypes,
     encountered_fragments: &mut EncounteredFragments,
     imported_resolvers: &mut ImportedResolvers,
+    runtime_imports: &mut RuntimeImports,
 ) {
     if let Some(resolver_metadata) = RelayResolverMetadata::find(&fragment_spread.directives) {
         visit_relay_resolver(
@@ -176,7 +250,9 @@ fn visit_fragment_spread(
             input_object_types,
             encountered_enums,
             custom_scalars,
+            imported_raw_response_types,
             encountered_fragments,
+            runtime_imports,
             type_selections,
             resolver_metadata,
             RequiredMetadataDirective::find(&fragment_spread.directives).is_some(),
@@ -225,22 +301,48 @@ fn generate_resolver_type(
     input_object_types: &mut InputObjectTypes,
     encountered_enums: &mut EncounteredEnums,
     custom_scalars: &mut CustomScalarsImports,
+    imported_raw_response_types: &mut ImportedRawResponseTypes,
     encountered_fragments: &mut EncounteredFragments,
-    resolver_name: StringKey,
-    fragment_name: Option<StringKey>,
+    runtime_imports: &mut RuntimeImports,
+    resolver_function_name: StringKey,
+    fragment_name: Option<FragmentDefinitionName>,
     resolver_metadata: &RelayResolverMetadata,
 ) -> AST {
     let mut resolver_arguments = vec![];
     if let Some(fragment_name) = fragment_name {
-        encountered_fragments
-            .0
-            .insert(EncounteredFragment::Key(fragment_name));
-        resolver_arguments.push(KeyValuePairProp {
-            key: "rootKey".intern(),
-            value: AST::RawType(format!("{}$key", fragment_name).intern()),
-            read_only: false,
-            optional: false,
-        });
+        if let Some((fragment_name, injection_mode)) =
+            resolver_metadata.fragment_data_injection_mode
+        {
+            match injection_mode {
+                FragmentDataInjectionMode::Field { name, .. } => {
+                    encountered_fragments
+                        .0
+                        .insert(EncounteredFragment::Data(fragment_name.item));
+
+                    resolver_arguments.push(KeyValuePairProp {
+                        key: name,
+                        value: AST::PropertyType {
+                            type_: Box::new(AST::RawType(
+                                format!("{}$data", fragment_name.item).intern(),
+                            )),
+                            property_name: name,
+                        },
+                        read_only: false,
+                        optional: false,
+                    });
+                }
+            }
+        } else {
+            encountered_fragments
+                .0
+                .insert(EncounteredFragment::Key(fragment_name));
+            resolver_arguments.push(KeyValuePairProp {
+                key: "rootKey".intern(),
+                value: AST::RawType(format!("{}$key", fragment_name).intern()),
+                read_only: false,
+                optional: false,
+            });
+        }
     }
 
     let parent_resolver_type = typegen_context
@@ -264,7 +366,7 @@ fn generate_resolver_type(
     let mut args = vec![];
     for field_argument in typegen_context.schema.field(field).arguments.iter() {
         args.push(Prop::KeyValuePair(KeyValuePairProp {
-            key: field_argument.name,
+            key: field_argument.name.0,
             optional: false,
             read_only: false,
             value: transform_input_type(
@@ -284,37 +386,98 @@ fn generate_resolver_type(
             optional: false,
         });
     }
+    let inner_type = resolver_metadata
+        .output_type_info
+        .as_ref()
+        .map(|output_type_info| match output_type_info {
+            ResolverOutputTypeInfo::ScalarField(field_id) => {
+                let field = typegen_context.schema.field(*field_id);
+                if is_relay_resolver_type(typegen_context, field) {
+                    AST::Mixed
+                } else {
+                    transform_scalar_type(
+                        typegen_context,
+                        &field.type_,
+                        None,
+                        encountered_enums,
+                        custom_scalars,
+                    )
+                }
+            }
+            ResolverOutputTypeInfo::Composite(normalization_info) => {
+                imported_raw_response_types.0.insert(
+                    normalization_info.normalization_operation.item.0,
+                    Some(normalization_info.normalization_operation.location),
+                );
+
+                let type_ = AST::Nullable(Box::new(AST::RawType(
+                    normalization_info.normalization_operation.item.0,
+                )));
+
+                let ast = if let Some(instance_field_name) =
+                    normalization_info.weak_object_instance_field
+                {
+                    AST::PropertyType {
+                        type_: Box::new(type_),
+                        property_name: instance_field_name,
+                    }
+                } else {
+                    type_
+                };
+
+                if normalization_info.plural {
+                    AST::ReadOnlyArray(Box::new(ast))
+                } else {
+                    ast
+                }
+            }
+        });
+
+    let return_type = if matches!(
+        typegen_context.project_config.typegen_config.language,
+        TypegenLanguage::TypeScript
+    ) {
+        // TODO: Add proper support for Resolver type generation in typescript
+        AST::Any
+    } else if resolver_metadata.live {
+        runtime_imports.import_relay_resolver_live_state_type = true;
+        AST::GenericType {
+            outer: *LIVE_STATE_TYPE,
+            inner: Box::new(inner_type.unwrap_or(AST::Any)),
+        }
+    } else {
+        inner_type.unwrap_or(AST::Mixed)
+    };
 
     AST::AssertFunctionType(FunctionTypeAssertion {
-        function_name: resolver_name,
+        function_name: resolver_function_name,
         arguments: resolver_arguments,
-        return_type: Box::new(AST::RawType("mixed".intern())),
+        return_type: Box::new(return_type),
     })
 }
 
 #[allow(clippy::too_many_arguments)]
-fn visit_relay_resolver(
+fn import_relay_resolver_function_type(
     typegen_context: &'_ TypegenContext<'_>,
-    fragment_name: Option<StringKey>,
+    fragment_name: Option<FragmentDefinitionName>,
     input_object_types: &mut InputObjectTypes,
     encountered_enums: &mut EncounteredEnums,
     custom_scalars: &mut CustomScalarsImports,
+    imported_raw_response_types: &mut ImportedRawResponseTypes,
     encountered_fragments: &mut EncounteredFragments,
-    type_selections: &mut Vec<TypeSelection>,
+    runtime_imports: &mut RuntimeImports,
     resolver_metadata: &RelayResolverMetadata,
-    required: bool,
     imported_resolvers: &mut ImportedResolvers,
 ) {
-    let field_name = resolver_metadata.field_name;
-
-    let key = resolver_metadata.field_alias.unwrap_or(field_name);
-    let live = resolver_metadata.live;
-
-    let local_resolver_name = to_camel_case(format!(
-        "{}_{}_resolver",
-        resolver_metadata.field_parent_type, field_name
-    ))
-    .intern();
+    let local_resolver_name = resolver_metadata.generate_local_resolver_name();
+    let resolver_name = if let Some(name) = resolver_metadata.import_name {
+        ImportedResolverName::Named {
+            name,
+            import_as: local_resolver_name,
+        }
+    } else {
+        ImportedResolverName::Default(local_resolver_name)
+    };
 
     let import_path = typegen_context.project_config.js_module_import_path(
         typegen_context.definition_source_location,
@@ -322,43 +485,205 @@ fn visit_relay_resolver(
     );
 
     let imported_resolver = ImportedResolver {
-        resolver_name: local_resolver_name,
+        resolver_name,
         resolver_type: generate_resolver_type(
             typegen_context,
             input_object_types,
             encountered_enums,
             custom_scalars,
+            imported_raw_response_types,
             encountered_fragments,
+            runtime_imports,
             local_resolver_name,
             fragment_name,
             resolver_metadata,
         ),
+        import_path,
     };
 
     imported_resolvers
         .0
-        .entry(import_path)
+        .entry(local_resolver_name)
         .or_insert(imported_resolver);
+}
 
-    let mut inner_value = Box::new(AST::ReturnTypeOfFunctionWithName(local_resolver_name));
+/// Check if the scalar field has output type as `RelayResolverValue`
+fn is_relay_resolver_type(typegen_context: &'_ TypegenContext<'_>, field: &Field) -> bool {
+    typegen_context
+        .schema
+        .scalar(field.type_.inner().get_scalar_id().unwrap())
+        .name
+        .item
+        == *TYPE_RELAY_RESOLVER_VALUE
+}
 
-    if live {
-        inner_value = Box::new(AST::ReturnTypeOfMethodCall(inner_value, intern!("read")));
-    }
-
-    let value = if required {
-        AST::NonNullable(inner_value)
+/// Build relay resolver field type
+fn relay_resolver_field_type(
+    typegen_context: &'_ TypegenContext<'_>,
+    resolver_metadata: &RelayResolverMetadata,
+    encountered_enums: &mut EncounteredEnums,
+    custom_scalars: &mut CustomScalarsImports,
+    local_resolver_name: StringKey,
+    required: bool,
+    live: bool,
+) -> AST {
+    let maybe_scalar_field = if let Some(ResolverOutputTypeInfo::ScalarField(field_id)) =
+        resolver_metadata.output_type_info
+    {
+        let field = typegen_context.schema.field(field_id);
+        // Scalar fields that return `RelayResolverValue` should behave as "classic"
+        // resolvers, where we infer the field type from the return type of the
+        // resolver function
+        if is_relay_resolver_type(typegen_context, field) {
+            None
+        } else {
+            Some(field)
+        }
     } else {
-        AST::Nullable(inner_value)
+        None
     };
+
+    if let Some(field) = maybe_scalar_field {
+        let inner_value = transform_scalar_type(
+            typegen_context,
+            &field.type_,
+            None,
+            encountered_enums,
+            custom_scalars,
+        );
+        if required {
+            if field.type_.is_non_null() {
+                inner_value
+            } else {
+                AST::NonNullable(Box::new(inner_value))
+            }
+        } else {
+            inner_value
+        }
+    } else {
+        let inner_value = AST::ReturnTypeOfFunctionWithName(local_resolver_name);
+        let inner_value = if live {
+            AST::ReturnTypeOfMethodCall(Box::new(inner_value), intern!("read"))
+        } else {
+            inner_value
+        };
+        if required {
+            AST::NonNullable(Box::new(inner_value))
+        } else {
+            AST::Nullable(Box::new(inner_value))
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn visit_relay_resolver(
+    typegen_context: &'_ TypegenContext<'_>,
+    fragment_name: Option<FragmentDefinitionName>,
+    input_object_types: &mut InputObjectTypes,
+    encountered_enums: &mut EncounteredEnums,
+    custom_scalars: &mut CustomScalarsImports,
+    imported_raw_response_types: &mut ImportedRawResponseTypes,
+    encountered_fragments: &mut EncounteredFragments,
+    runtime_imports: &mut RuntimeImports,
+    type_selections: &mut Vec<TypeSelection>,
+    resolver_metadata: &RelayResolverMetadata,
+    required: bool,
+    imported_resolvers: &mut ImportedResolvers,
+) {
+    import_relay_resolver_function_type(
+        typegen_context,
+        fragment_name,
+        input_object_types,
+        encountered_enums,
+        custom_scalars,
+        imported_raw_response_types,
+        encountered_fragments,
+        runtime_imports,
+        resolver_metadata,
+        imported_resolvers,
+    );
+
+    let field_name = resolver_metadata.field_name;
+    let key = resolver_metadata.field_alias.unwrap_or(field_name);
+    let live = resolver_metadata.live;
+    let local_resolver_name = resolver_metadata.generate_local_resolver_name();
+
+    let resolver_type = relay_resolver_field_type(
+        typegen_context,
+        resolver_metadata,
+        encountered_enums,
+        custom_scalars,
+        local_resolver_name,
+        required,
+        live,
+    );
 
     type_selections.push(TypeSelection::ScalarField(TypeSelectionScalarField {
         field_name_or_alias: key,
         special_field: None,
-        value,
+        value: resolver_type,
         conditional: false,
         concrete_type: None,
     }));
+}
+
+#[allow(clippy::too_many_arguments)]
+fn visit_client_edge(
+    typegen_context: &'_ TypegenContext<'_>,
+    input_object_types: &mut InputObjectTypes,
+    encountered_enums: &mut EncounteredEnums,
+    custom_scalars: &mut CustomScalarsImports,
+    imported_raw_response_types: &mut ImportedRawResponseTypes,
+    encountered_fragments: &mut EncounteredFragments,
+    type_selections: &mut Vec<TypeSelection>,
+    client_edge_metadata: &ClientEdgeMetadata<'_>,
+    actor_change_status: &mut ActorChangeStatus,
+    imported_resolvers: &mut ImportedResolvers,
+    runtime_imports: &mut RuntimeImports,
+    enclosing_linked_field_concrete_type: Option<Type>,
+) {
+    let (resolver_metadata, fragment_name) = match &client_edge_metadata.backing_field {
+        Selection::FragmentSpread(fragment_spread) => (
+            RelayResolverMetadata::find(&fragment_spread.directives),
+            Some(fragment_spread.fragment.item),
+        ),
+        Selection::ScalarField(scalar_field) => {
+            (RelayResolverMetadata::find(&scalar_field.directives), None)
+        }
+        _ => panic!(
+            "Expect correct relay resolver selection (fragment spread or scalar field). Got {:?}",
+            client_edge_metadata.backing_field
+        ),
+    };
+    if let Some(resolver_metadata) = resolver_metadata {
+        import_relay_resolver_function_type(
+            typegen_context,
+            fragment_name,
+            input_object_types,
+            encountered_enums,
+            custom_scalars,
+            imported_raw_response_types,
+            encountered_fragments,
+            runtime_imports,
+            resolver_metadata,
+            imported_resolvers,
+        );
+    }
+
+    let mut client_edge_selections = visit_selections(
+        typegen_context,
+        &[client_edge_metadata.selections.clone()],
+        input_object_types,
+        encountered_enums,
+        imported_raw_response_types,
+        encountered_fragments,
+        imported_resolvers,
+        actor_change_status,
+        custom_scalars,
+        runtime_imports,
+        enclosing_linked_field_concrete_type,
+    );
+    type_selections.append(&mut client_edge_selections);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -368,10 +693,12 @@ fn visit_inline_fragment(
     inline_fragment: &InlineFragment,
     input_object_types: &mut InputObjectTypes,
     encountered_enums: &mut EncounteredEnums,
+    imported_raw_response_types: &mut ImportedRawResponseTypes,
     encountered_fragments: &mut EncounteredFragments,
     imported_resolvers: &mut ImportedResolvers,
     actor_change_status: &mut ActorChangeStatus,
     custom_scalars: &mut CustomScalarsImports,
+    runtime_imports: &mut RuntimeImports,
     enclosing_linked_field_concrete_type: Option<Type>,
 ) {
     if let Some(module_metadata) = ModuleMetadata::find(&inline_fragment.directives) {
@@ -409,10 +736,27 @@ fn visit_inline_fragment(
             inline_fragment,
             input_object_types,
             encountered_enums,
+            imported_raw_response_types,
             encountered_fragments,
             imported_resolvers,
             actor_change_status,
             custom_scalars,
+            runtime_imports,
+            enclosing_linked_field_concrete_type,
+        );
+    } else if let Some(client_edge_metadata) = ClientEdgeMetadata::find(inline_fragment) {
+        visit_client_edge(
+            typegen_context,
+            input_object_types,
+            encountered_enums,
+            custom_scalars,
+            imported_raw_response_types,
+            encountered_fragments,
+            type_selections,
+            &client_edge_metadata,
+            actor_change_status,
+            imported_resolvers,
+            runtime_imports,
             enclosing_linked_field_concrete_type,
         );
     } else {
@@ -421,10 +765,12 @@ fn visit_inline_fragment(
             &inline_fragment.selections,
             input_object_types,
             encountered_enums,
+            imported_raw_response_types,
             encountered_fragments,
             imported_resolvers,
             actor_change_status,
             custom_scalars,
+            runtime_imports,
             enclosing_linked_field_concrete_type,
         );
 
@@ -481,10 +827,12 @@ fn visit_actor_change(
     inline_fragment: &InlineFragment,
     input_object_types: &mut InputObjectTypes,
     encountered_enums: &mut EncounteredEnums,
+    imported_raw_response_types: &mut ImportedRawResponseTypes,
     encountered_fragments: &mut EncounteredFragments,
     imported_resolvers: &mut ImportedResolvers,
     actor_change_status: &mut ActorChangeStatus,
     custom_scalars: &mut CustomScalarsImports,
+    runtime_imports: &mut RuntimeImports,
     enclosing_linked_field_concrete_type: Option<Type>,
 ) {
     let linked_field = match &inline_fragment.selections[0] {
@@ -508,10 +856,12 @@ fn visit_actor_change(
         &linked_field.selections,
         input_object_types,
         encountered_enums,
+        imported_raw_response_types,
         encountered_fragments,
         imported_resolvers,
         actor_change_status,
         custom_scalars,
+        runtime_imports,
         enclosing_linked_field_concrete_type,
     );
     type_selections.push(TypeSelection::ScalarField(TypeSelectionScalarField {
@@ -572,7 +922,7 @@ fn raw_response_visit_inline_fragment(
 
     if let Some(module_metadata) = ModuleMetadata::find(&inline_fragment.directives) {
         let fragment_name = module_metadata.fragment_name;
-        if !match_fields.0.contains_key(&fragment_name) {
+        if !match_fields.0.contains_key(&fragment_name.0) {
             let match_field = raw_response_selections_to_babel(
                 typegen_context,
                 selections.iter().filter(|sel| !sel.is_js_field()).cloned(),
@@ -581,7 +931,7 @@ fn raw_response_visit_inline_fragment(
                 runtime_imports,
                 custom_scalars,
             );
-            match_fields.0.insert(fragment_name, match_field);
+            match_fields.0.insert(fragment_name.0, match_field);
         }
 
         type_selections.extend(selections.iter().filter(|sel| sel.is_js_field()).cloned());
@@ -698,10 +1048,12 @@ fn visit_condition(
     condition: &Condition,
     input_object_types: &mut InputObjectTypes,
     encountered_enums: &mut EncounteredEnums,
+    imported_raw_response_types: &mut ImportedRawResponseTypes,
     encountered_fragments: &mut EncounteredFragments,
     imported_resolvers: &mut ImportedResolvers,
     actor_change_status: &mut ActorChangeStatus,
     custom_scalars: &mut CustomScalarsImports,
+    runtime_imports: &mut RuntimeImports,
     enclosing_linked_field_concrete_type: Option<Type>,
 ) {
     let mut selections = visit_selections(
@@ -709,10 +1061,12 @@ fn visit_condition(
         &condition.selections,
         input_object_types,
         encountered_enums,
+        imported_raw_response_types,
         encountered_fragments,
         imported_resolvers,
         actor_change_status,
         custom_scalars,
+        runtime_imports,
         enclosing_linked_field_concrete_type,
     );
     for selection in selections.iter_mut() {
@@ -1195,46 +1549,46 @@ fn make_prop(
                     }
                 } else {
                     let setter_parameter = AST::Union(
-                            	SortedASTList::new(
-                                just_fragments
-                                    .iter()
-                                    .map(|fragment_spread| {
-                                        let type_condition_info =  fragment_spread
-                                            .type_condition_info
-                                            .expect("Fragment spreads in updatable queries should have TypeConditionInfo");
-                                        let (key, value) = match type_condition_info {
-                                            TypeConditionInfo::Abstract => (format!("__is{}", fragment_spread.fragment_name).intern(), AST::String),
-                                            TypeConditionInfo::Concrete { concrete_type } => ("__typename".intern(), AST::StringLiteral(StringLiteral(concrete_type))),
-                                        };
-                                        let fragment_spread_or_concrete_type_marker = Prop::KeyValuePair(KeyValuePairProp {
-                                            key,
-                                            value,
-                                            read_only: true,
-                                            optional: false,
-                                        });
-                                        let assignable_fragment_spread_ref= Prop::KeyValuePair(KeyValuePairProp {
-                                            key: *KEY_FRAGMENT_SPREADS,
-                                            value: AST::FragmentReferenceType(
-                                                fragment_spread.fragment_name,
-                                            ),
-                                            read_only: true,
-                                            optional: false,
-                                        });
-                                        let client_id_field = Prop::KeyValuePair(KeyValuePairProp {
-                                            key: "__id".intern(),
-                                            value: AST::String,
-                                            read_only: true,
-                                            optional: false,
-                                        });
+                                 SortedASTList::new(
+                                 just_fragments
+                                     .iter()
+                                     .map(|fragment_spread| {
+                                         let type_condition_info =  fragment_spread
+                                             .type_condition_info
+                                             .expect("Fragment spreads in updatable queries should have TypeConditionInfo");
+                                         let (key, value) = match type_condition_info {
+                                             TypeConditionInfo::Abstract => (format!("__is{}", fragment_spread.fragment_name).intern(), AST::String),
+                                             TypeConditionInfo::Concrete { concrete_type } => ("__typename".intern(), AST::StringLiteral(StringLiteral(concrete_type))),
+                                         };
+                                         let fragment_spread_or_concrete_type_marker = Prop::KeyValuePair(KeyValuePairProp {
+                                             key,
+                                             value,
+                                             read_only: true,
+                                             optional: false,
+                                         });
+                                         let assignable_fragment_spread_ref= Prop::KeyValuePair(KeyValuePairProp {
+                                             key: *KEY_FRAGMENT_SPREADS,
+                                             value: AST::FragmentReferenceType(
+                                                 fragment_spread.fragment_name.0,
+                                             ),
+                                             read_only: true,
+                                             optional: false,
+                                         });
+                                         let client_id_field = Prop::KeyValuePair(KeyValuePairProp {
+                                             key: "__id".intern(),
+                                             value: AST::String,
+                                             read_only: true,
+                                             optional: false,
+                                         });
 
-                                        AST::InexactObject(InexactObject::new(vec![
-                                            assignable_fragment_spread_ref,
-                                            fragment_spread_or_concrete_type_marker,
-                                            client_id_field,
-                                        ]))
-                                    })
-                                    .collect(),
-                            ));
+                                         AST::InexactObject(InexactObject::new(vec![
+                                             assignable_fragment_spread_ref,
+                                             fragment_spread_or_concrete_type_marker,
+                                             client_id_field,
+                                         ]))
+                                     })
+                                     .collect(),
+                             ));
                     if linked_field.node_type.is_list() {
                         AST::ReadOnlyArray(Box::new(setter_parameter))
                     } else {
@@ -1319,10 +1673,11 @@ fn raw_response_make_prop(
     runtime_imports: &mut RuntimeImports,
     custom_scalars: &mut CustomScalarsImports,
 ) -> Prop {
-    let optional = type_selection.is_conditional();
+    let optional =
+        !typegen_context.no_optional_fields_in_raw_response_type && type_selection.is_conditional();
     match type_selection {
         TypeSelection::ModuleDirective(module_directive) => Prop::Spread(SpreadProp {
-            value: module_directive.fragment_name,
+            value: module_directive.fragment_name.0,
         }),
         TypeSelection::LinkedField(linked_field) => {
             let node_type = linked_field.node_type;
@@ -1393,7 +1748,7 @@ fn raw_response_make_prop(
 
 fn transform_scalar_type(
     typegen_context: &'_ TypegenContext<'_>,
-    type_reference: &TypeReference,
+    type_reference: &TypeReference<Type>,
     object_props: Option<AST>,
     encountered_enums: &mut EncounteredEnums,
     custom_scalars: &mut CustomScalarsImports,
@@ -1418,7 +1773,7 @@ fn transform_scalar_type(
 
 fn transform_non_nullable_scalar_type(
     typegen_context: &'_ TypegenContext<'_>,
-    type_reference: &TypeReference,
+    type_reference: &TypeReference<Type>,
     object_props: Option<AST>,
     encountered_enums: &mut EncounteredEnums,
     custom_scalars: &mut CustomScalarsImports,
@@ -1450,7 +1805,39 @@ fn transform_graphql_scalar_type(
     scalar: ScalarID,
     custom_scalars: &mut CustomScalarsImports,
 ) -> AST {
-    let scalar_name = typegen_context.schema.scalar(scalar).name;
+    let scalar_definition = typegen_context.schema.scalar(scalar);
+    let scalar_name = scalar_definition.name;
+    if let Some(directive) = scalar_definition
+        .directives
+        .named(DirectiveName(*CUSTOM_SCALAR_DIRECTIVE_NAME))
+    {
+        let path = directive
+            .arguments
+            .named(ArgumentName(*PATH_CUSTOM_SCALAR_ARGUMENT_NAME))
+            .expect(&format!(
+                "Expected @{} directive to have a path argument",
+                *CUSTOM_SCALAR_DIRECTIVE_NAME
+            ))
+            .expect_string_literal();
+
+        let import_path = typegen_context
+            .project_config
+            .js_module_import_path(typegen_context.definition_source_location, path);
+
+        let export_name = directive
+            .arguments
+            .named(ArgumentName(*EXPORT_NAME_CUSTOM_SCALAR_ARGUMENT_NAME))
+            .expect(&format!(
+                "Expected @{} directive to have an export_name argument",
+                *CUSTOM_SCALAR_DIRECTIVE_NAME
+            ))
+            .expect_string_literal();
+        custom_scalars.insert((export_name, PathBuf::from(import_path.lookup())));
+        return AST::RawType(export_name);
+    }
+    // TODO: We could implement custom variables that are provided via the
+    // config by inserting them into the schema with directives, thus avoiding
+    // having two different ways to express typed custom scalars internally.
     if let Some(custom_scalar) = typegen_context
         .project_config
         .typegen_config
@@ -1492,7 +1879,7 @@ fn transform_graphql_enum_type(
     encountered_enums: &mut EncounteredEnums,
 ) -> AST {
     encountered_enums.0.insert(enum_id);
-    AST::Identifier(schema.enum_(enum_id).name.item)
+    AST::Identifier(schema.enum_(enum_id).name.item.0)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1514,8 +1901,14 @@ pub(crate) fn raw_response_visit_selections(
                 // @relay_client_component generate fragment spreads without
                 // @no_inline if no_inline isn't enabled for the fragment.
                 if NoInlineFragmentSpreadMetadata::find(&spread.directives).is_some() {
-                    let spread_type = spread.fragment.item;
-                    imported_raw_response_types.0.insert(spread_type);
+                    let spread_type = spread.fragment.item.0;
+                    imported_raw_response_types.0.insert(
+                        spread_type,
+                        typegen_context
+                            .fragment_locations
+                            .location(&spread.fragment.item)
+                            .copied(),
+                    );
                     type_selections.push(TypeSelection::RawResponseFragmentSpread(
                         RawResponseFragmentSpread {
                             value: spread_type,
@@ -1596,7 +1989,7 @@ pub(crate) fn raw_response_visit_selections(
 
 fn transform_non_nullable_input_type(
     typegen_context: &'_ TypegenContext<'_>,
-    type_ref: &TypeReference,
+    type_ref: &TypeReference<Type>,
     input_object_types: &mut InputObjectTypes,
     encountered_enums: &mut EncounteredEnums,
     custom_scalars: &mut CustomScalarsImports,
@@ -1628,14 +2021,14 @@ fn transform_non_nullable_input_type(
                             .iter()
                             .map(|field| {
                                 Prop::KeyValuePair(KeyValuePairProp {
-                                    key: field.name,
+                                    key: field.name.0,
                                     read_only: false,
                                     optional: !field.type_.is_non_null()
                                         || typegen_context
                                             .project_config
                                             .typegen_config
                                             .optional_input_fields
-                                            .contains(&field.name),
+                                            .contains(&field.name.0),
                                     value: transform_input_type(
                                         typegen_context,
                                         &field.type_,
@@ -1652,7 +2045,7 @@ fn transform_non_nullable_input_type(
                         GeneratedInputObject::Resolved(props),
                     );
                 }
-                AST::Identifier(input_object.name.item)
+                AST::Identifier(input_object.name.item.0)
             }
             Type::Union(_) | Type::Object(_) | Type::Interface(_) => {
                 panic!("unexpected non-input type")
@@ -1664,7 +2057,7 @@ fn transform_non_nullable_input_type(
 
 pub(crate) fn transform_input_type(
     typegen_context: &'_ TypegenContext<'_>,
-    type_ref: &TypeReference,
+    type_ref: &TypeReference<Type>,
     input_object_types: &mut InputObjectTypes,
     encountered_enums: &mut EncounteredEnums,
     custom_scalars: &mut CustomScalarsImports,
@@ -1699,7 +2092,7 @@ pub(crate) fn get_input_variables_type<'a>(
             .iter()
             .map(|var_def| {
                 Prop::KeyValuePair(KeyValuePairProp {
-                    key: var_def.name.item,
+                    key: var_def.name.item.0,
                     read_only: false,
                     optional: !var_def.type_.is_non_null(),
                     value: transform_input_type(
@@ -1850,19 +2243,23 @@ fn group_refs(props: impl Iterator<Item = TypeSelection>) -> impl Iterator<Item 
                 return Some(prop);
             }
         }
+
+        let get_fragment_as_stringkey = |fragment_name: FragmentDefinitionName| fragment_name.0;
         if let Some(refs) = regular_fragment_spreads.take() {
+            let refs_as_stringkeys = refs.into_iter().map(get_fragment_as_stringkey).collect();
             return Some(TypeSelection::ScalarField(TypeSelectionScalarField {
                 field_name_or_alias: *KEY_FRAGMENT_SPREADS,
-                value: AST::FragmentReference(SortedStringKeyList::new(refs)),
+                value: AST::FragmentReference(SortedStringKeyList::new(refs_as_stringkeys)),
                 special_field: None,
                 conditional: false,
                 concrete_type: None,
             }));
         }
         if let Some(refs) = updatable_fragment_spreads.take() {
+            let refs_as_stringkeys = refs.into_iter().map(get_fragment_as_stringkey).collect();
             return Some(TypeSelection::ScalarField(TypeSelectionScalarField {
                 field_name_or_alias: *KEY_UPDATABLE_FRAGMENT_SPREADS,
-                value: AST::FragmentReference(SortedStringKeyList::new(refs)),
+                value: AST::FragmentReference(SortedStringKeyList::new(refs_as_stringkeys)),
                 special_field: None,
                 conditional: false,
                 concrete_type: None,
@@ -1873,9 +2270,9 @@ fn group_refs(props: impl Iterator<Item = TypeSelection>) -> impl Iterator<Item 
 }
 
 fn apply_required_directive_nullability(
-    field_type: &TypeReference,
+    field_type: &TypeReference<Type>,
     directives: &[Directive],
-) -> TypeReference {
+) -> TypeReference<Type> {
     // We apply bubbling before the field's own @required directive (which may
     // negate the effects of bubbling) because we need handle the case where
     // null can bubble to the _items_ in a plural field which is itself
@@ -1890,35 +2287,17 @@ fn apply_required_directive_nullability(
     }
 }
 
-/// Converts a `String` to a camel case `String`
-fn to_camel_case(non_camelized_string: String) -> String {
-    let mut camelized_string = String::with_capacity(non_camelized_string.len());
-    let mut last_character_was_not_alphanumeric = false;
-    for (i, ch) in non_camelized_string.chars().enumerate() {
-        if !ch.is_alphanumeric() {
-            last_character_was_not_alphanumeric = true;
-        } else if last_character_was_not_alphanumeric {
-            camelized_string.push(ch.to_ascii_uppercase());
-            last_character_was_not_alphanumeric = false;
-        } else {
-            camelized_string.push(if i == 0 { ch.to_ascii_lowercase() } else { ch });
-            last_character_was_not_alphanumeric = false;
-        }
-    }
-    camelized_string
-}
-
 fn get_type_condition_info(fragment_spread: &FragmentSpread) -> Option<TypeConditionInfo> {
     fragment_spread
-        .directives
-        .named(*ASSIGNABLE_DIRECTIVE_FOR_TYPEGEN)
-        .map(|directive| {
-            directive
-                .data
-                .as_ref()
-                .and_then(|data| data.downcast_ref().copied())
-                .expect("If a fragment spread contains an __updatable directive, the associated data should be present and have type TypeConditionInfo")
-        })
+         .directives
+         .named(*ASSIGNABLE_DIRECTIVE_FOR_TYPEGEN)
+         .map(|directive| {
+             directive
+                 .data
+                 .as_ref()
+                 .and_then(|data| data.downcast_ref().copied())
+                 .expect("If a fragment spread contains an __updatable directive, the associated data should be present and have type TypeConditionInfo")
+         })
 }
 
 /// Returns the type of the generated query. This is the type parameter that you would have

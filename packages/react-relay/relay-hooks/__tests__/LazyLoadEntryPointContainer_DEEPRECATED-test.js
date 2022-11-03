@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -156,7 +154,7 @@ it('suspends while the query and component are pending', () => {
 });
 
 it('suspends while the component is loading', () => {
-  preloadQuery_DEPRECATED(environment, params, {id: '4'});
+  preloadQuery_DEPRECATED<any, empty>(environment, params, {id: '4'});
   expect(fetch).toBeCalledTimes(1);
   dataSource.next(response);
   dataSource.complete();
@@ -254,7 +252,7 @@ it('renders synchronously when the query and component are already loaded', () =
   }
   // $FlowFixMe[prop-missing]
   entryPoint.root.resolve(Component);
-  preloadQuery_DEPRECATED(environment, params, {id: '4'});
+  preloadQuery_DEPRECATED<any, empty>(environment, params, {id: '4'});
   expect(fetch).toBeCalledTimes(1);
   dataSource.next(response);
   dataSource.complete();
@@ -286,7 +284,7 @@ it('re-renders without reloading when non-prefetch props change', () => {
   });
   // $FlowFixMe[prop-missing]
   entryPoint.root.resolve(Component);
-  preloadQuery_DEPRECATED(environment, params, {id: '4'});
+  preloadQuery_DEPRECATED<any, empty>(environment, params, {id: '4'});
   expect(fetch).toBeCalledTimes(1);
   dataSource.next(response);
   dataSource.complete();
@@ -327,7 +325,7 @@ it('re-renders and reloads when prefetch params change', () => {
   });
   // $FlowFixMe[prop-missing]
   entryPoint.root.resolve(Component);
-  preloadQuery_DEPRECATED(environment, params, {id: '4'});
+  preloadQuery_DEPRECATED<any, empty>(environment, params, {id: '4'});
   expect(fetch).toBeCalledTimes(1);
   dataSource.next(response);
   dataSource.complete();

@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -32,7 +30,7 @@ const {commitMutation: defaultCommitMutation} = require('relay-runtime');
 
 const {useState, useEffect, useRef, useCallback} = React;
 
-export type UseMutationConfig<TMutation: MutationParameters> = {|
+export type UseMutationConfig<TMutation: MutationParameters> = {
   configs?: Array<DeclarativeMutationConfig>,
   onError?: ?(error: Error) => void,
   onCompleted?: ?(
@@ -50,7 +48,7 @@ export type UseMutationConfig<TMutation: MutationParameters> = {|
   updater?: ?SelectorStoreUpdater<TMutation['response']>,
   uploadables?: UploadableMap,
   variables: TMutation['variables'],
-|};
+};
 
 function useMutation<TMutation: MutationParameters>(
   mutation: GraphQLTaggedNode,
@@ -67,7 +65,7 @@ function useMutation<TMutation: MutationParameters>(
   const [isMutationInFlight, setMutationInFlight] = useState(false);
 
   const cleanup = useCallback(
-    disposable => {
+    (disposable: Disposable) => {
       if (
         environmentRef.current === environment &&
         mutationRef.current === mutation
@@ -100,7 +98,7 @@ function useMutation<TMutation: MutationParameters>(
       if (isMountedRef.current) {
         setMutationInFlight(true);
       }
-      const disposable = commitMutationFn(environment, {
+      const disposable: Disposable = commitMutationFn(environment, {
         ...config,
         mutation,
         onCompleted: (response, errors) => {

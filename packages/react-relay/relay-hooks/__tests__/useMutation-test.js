@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 import type {RelayMockEnvironment} from '../../../relay-test-utils/RelayModernMockEnvironment';
@@ -87,16 +85,16 @@ beforeEach(() => {
   function Renderer({
     initialMutation,
     commitInRender,
-  }: {|
+  }: {
     commitInRender: boolean,
     initialMutation: Mutation<
       useMutationTest1Mutation$variables,
       useMutationTest1Mutation$data,
     >,
-  |}) {
+  }) {
     const [mutation, setMutationFn] = useState(initialMutation);
     setMutation = setMutationFn;
-    const [commitFn, isMutationInFlight] = useMutation(mutation);
+    const [commitFn, isMutationInFlight] = useMutation<any>(mutation);
     commit = (config: any) =>
       ReactTestRenderer.act(() => {
         disposable = commitFn(config);
@@ -112,14 +110,14 @@ beforeEach(() => {
     return null;
   }
 
-  function Container(props: {|
+  function Container(props: {
     commitInRender: boolean,
     environment: RelayMockEnvironment,
     mutation: Mutation<
       useMutationTest1Mutation$variables,
       useMutationTest1Mutation$data,
     >,
-  |}) {
+  }) {
     const [env, setEnv] = useState(props.environment);
     setEnvironment = setEnv;
     return (

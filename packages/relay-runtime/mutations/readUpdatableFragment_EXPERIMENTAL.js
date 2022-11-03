@@ -5,11 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict-local
- * @emails oncall+relay
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -18,6 +16,7 @@ import type {
   HasUpdatableSpread,
   RecordSourceProxy,
   UpdatableData,
+  MissingFieldHandler,
 } from '../store/RelayStoreTypes';
 import type {UpdatableFragment} from '../util/RelayRuntimeTypes';
 
@@ -32,6 +31,7 @@ function readUpdatableFragment_EXPERIMENTAL<TFragmentType: FragmentType, TData>(
   fragment: UpdatableFragment<TFragmentType, TData>,
   fragmentReference: HasUpdatableSpread<TFragmentType>,
   proxy: RecordSourceProxy,
+  missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>,
 ): UpdatableData<TData> {
   const updatableFragment = getFragment(fragment);
   const fragmentVariables = getVariablesFromFragment(
@@ -53,6 +53,7 @@ function readUpdatableFragment_EXPERIMENTAL<TFragmentType: FragmentType, TData>(
       fragmentVariables,
       updatableFragment.selections,
       proxy,
+      missingFieldHandlers,
     ),
   };
 }

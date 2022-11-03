@@ -6,6 +6,7 @@
  *
  * @flow
  * @format
+ * @oncall relay
  */
 
 'use strict';
@@ -86,7 +87,7 @@ function createNode(
   state: BabelState,
   path: $FlowFixMe,
   graphqlDefinition: OperationDefinitionNode | FragmentDefinitionNode,
-  options: {|
+  options: {
     // If an output directory is specified when running relay-compiler this should point to that directory
     artifactDirectory: ?string,
     // Generate eager es modules instead of lazy require
@@ -99,7 +100,7 @@ function createNode(
     isDevVariable: ?string,
     // Use haste style global requires, defaults to false.
     isHasteMode: boolean,
-  |},
+  },
 ): Object {
   const definitionName = graphqlDefinition.name && graphqlDefinition.name.value;
   if (!definitionName) {

@@ -5,17 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::BufWriter;
+use std::io::Write;
+
 use async_trait::async_trait;
 use dashmap::DashMap;
 use md5::Md5;
 use persist_query::PersistError;
-use relay_config::{LocalPersistAlgorithm, LocalPersistConfig};
-use sha1::{Digest, Sha1};
+use relay_config::LocalPersistAlgorithm;
+use relay_config::LocalPersistConfig;
+use sha1::Digest;
+use sha1::Sha1;
 use sha2::Sha256;
-use std::collections::BTreeMap;
-use std::fs::File;
-use std::io::{BufWriter, Write};
 
+use crate::config::ArtifactForPersister;
 use crate::OperationPersister;
 
 pub struct LocalPersister {
@@ -42,18 +47,18 @@ impl LocalPersister {
         match self.config.algorithm {
             LocalPersistAlgorithm::MD5 => {
                 let mut md5 = Md5::new();
-                md5.input(operation_text);
-                hex::encode(md5.result())
+                md5.update(operation_text);
+                hex::encode(md5.finalize())
             }
             LocalPersistAlgorithm::SHA1 => {
                 let mut hash = Sha1::new();
-                hash.input(&operation_text);
-                hex::encode(hash.result())
+                hash.update(&operation_text);
+                hex::encode(hash.finalize())
             }
             LocalPersistAlgorithm::SHA256 => {
                 let mut hash = Sha256::new();
-                hash.input(&operation_text);
-                hex::encode(hash.result())
+                hash.update(&operation_text);
+                hex::encode(hash.finalize())
             }
         }
     }
@@ -61,11 +66,14 @@ impl LocalPersister {
 
 #[async_trait]
 impl OperationPersister for LocalPersister {
-    async fn persist_artifact(&self, artifact_text: String) -> Result<String, PersistError> {
-        let operation_hash = self.hash_operation(artifact_text.clone());
+    async fn persist_artifact(
+        &self,
+        artifact: ArtifactForPersister,
+    ) -> Result<String, PersistError> {
+        let operation_hash = self.hash_operation(artifact.text.clone());
 
         if !self.query_map.contains_key(&operation_hash) {
-            self.query_map.insert(operation_hash.clone(), artifact_text);
+            self.query_map.insert(operation_hash.clone(), artifact.text);
         }
 
         Ok(operation_hash)

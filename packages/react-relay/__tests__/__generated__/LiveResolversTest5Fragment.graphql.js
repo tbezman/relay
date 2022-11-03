@@ -4,7 +4,9 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @generated SignedSource<<92566f2b424b07e50d8e6eb7e99ee31c>>
+ * @oncall relay
+ *
+ * @generated SignedSource<<59c8fb7e5afba2d431b71eb6c420d9df>>
  * @flow
  * @lightSyntaxTransform
  * @nogrep
@@ -16,14 +18,15 @@
 
 /*::
 import type { Fragment, ReaderFragment } from 'relay-runtime';
-type CounterSuspendsWhenOdd$key = any;
+import type { CounterSuspendsWhenOdd$key } from "./../../../relay-runtime/store/__tests__/resolvers/__generated__/CounterSuspendsWhenOdd.graphql";
+import type { LiveState } from "relay-runtime/store/experimental-live-resolvers/LiveResolverStore";
 import type { FragmentType } from "relay-runtime";
-import queryCounterSuspendsWhenOddResolver from "../../../relay-runtime/store/__tests__/resolvers/CounterSuspendsWhenOdd.js";
+import {counter_suspends_when_odd as queryCounterSuspendsWhenOddResolver} from "../../../relay-runtime/store/__tests__/resolvers/CounterSuspendsWhenOdd.js";
 // Type assertion validating that `queryCounterSuspendsWhenOddResolver` resolver is correctly implemented.
 // A type error here indicates that the type signature of the resolver module is incorrect.
 (queryCounterSuspendsWhenOddResolver: (
   rootKey: CounterSuspendsWhenOdd$key, 
-) => mixed);
+) => LiveState<any>);
 declare export opaque type LiveResolversTest5Fragment$fragmentType: FragmentType;
 export type LiveResolversTest5Fragment$data = {|
   +counter_suspends_when_odd: ?$Call<$Call<<R>((...empty[]) => R) => R, typeof queryCounterSuspendsWhenOddResolver>["read"]>,
@@ -52,7 +55,7 @@ var node/*: ReaderFragment*/ = {
       },
       "kind": "RelayLiveResolver",
       "name": "counter_suspends_when_odd",
-      "resolverModule": require('./../../../relay-runtime/store/__tests__/resolvers/CounterSuspendsWhenOdd.js'),
+      "resolverModule": require('./../../../relay-runtime/store/__tests__/resolvers/CounterSuspendsWhenOdd').counter_suspends_when_odd,
       "path": "counter_suspends_when_odd"
     }
   ],

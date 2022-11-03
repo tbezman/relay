@@ -4,14 +4,13 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow strict-local
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
 
-// flowlint ambiguous-object-type:error
-
 'use strict';
+
 import type {GraphQLResponseWithoutData} from '../../network/RelayNetworkTypes';
 import type {RecordSourceSelectorProxy} from '../../store/RelayStoreTypes';
 import type {
@@ -463,7 +462,7 @@ describe('Configs: RANGE_ADD', () => {
       feedback: feedbackID,
       message: {
         text: 'Hello!',
-        ranges: [],
+        ranges: ([]: Array<mixed>),
       },
     },
   };

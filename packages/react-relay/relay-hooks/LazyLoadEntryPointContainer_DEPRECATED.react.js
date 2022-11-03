@@ -4,12 +4,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -27,13 +25,13 @@ const React = require('react');
 const {useContext, useEffect, useMemo} = require('react');
 const {stableCopy} = require('relay-runtime');
 
-type PreloadedEntryPoint<TEntryPointComponent> = $ReadOnly<{|
+type PreloadedEntryPoint<TEntryPointComponent> = $ReadOnly<{
   entryPoints: React.ElementConfig<TEntryPointComponent>['entryPoints'],
   extraProps: React.ElementConfig<TEntryPointComponent>['extraProps'],
   getComponent: () => TEntryPointComponent,
   queries: React.ElementConfig<TEntryPointComponent>['queries'],
   rootModuleID: string,
-|}>;
+}>;
 
 type EntryPointContainerProps<
   TEntryPointParams,
@@ -42,7 +40,7 @@ type EntryPointContainerProps<
   TRuntimeProps,
   TExtraProps,
 > = $ReadOnly<
-  $ReadOnly<{|
+  $ReadOnly<{
     entryPoint: EntryPoint<
       TEntryPointParams,
       EntryPointComponent<
@@ -55,7 +53,7 @@ type EntryPointContainerProps<
     entryPointParams: TEntryPointParams,
     environmentProvider?: IEnvironmentProvider<EnvironmentProviderOptions>,
     props: TRuntimeProps,
-  |}>,
+  }>,
 >;
 
 function stableStringify(value: mixed): string {

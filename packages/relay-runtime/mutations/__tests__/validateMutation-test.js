@@ -6,10 +6,8 @@
  *
  * @flow strict-local
  * @format
- * @emails oncall+relay
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -874,7 +872,7 @@ describe('validateOptimisticResponse', () => {
     });
 
     it('Throws an error when optimistic responses contain Flight fields', () => {
-      const optimisticResponse = {
+      const optimisticResponse: $FlowFixMe = {
         storyUpdate: {
           story: {
             id: 1,

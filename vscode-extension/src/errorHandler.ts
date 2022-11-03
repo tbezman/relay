@@ -7,10 +7,10 @@
 
 import {window} from 'vscode';
 import {CloseAction, ErrorAction, ErrorHandler} from 'vscode-languageclient';
-import {RelayExtensionContext} from './context';
+import {RelayProjectExtensionContext} from './context';
 
 export function createErrorHandler(
-  context: RelayExtensionContext,
+  context: RelayProjectExtensionContext,
 ): ErrorHandler {
   return {
     // This happens when the LSP server stops running.
@@ -37,12 +37,14 @@ export function createErrorHandler(
         )
         .then(selected => {
           if (selected === 'Go to output') {
-            context.primaryOutputChannel.show();
+            // eslint-disable-next-line no-underscore-dangle
+            context._outputChannel.show();
           }
         });
 
       return CloseAction.DoNotRestart;
     },
+
     // This `error` callback should probably never happen. 🙏
     error() {
       window
@@ -53,7 +55,8 @@ export function createErrorHandler(
         )
         .then(selected => {
           if (selected === 'Go to output') {
-            context.primaryOutputChannel.show();
+            // eslint-disable-next-line no-underscore-dangle
+            context._outputChannel.show();
           }
         });
 

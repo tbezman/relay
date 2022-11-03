@@ -4,14 +4,13 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @format
  * @flow
- * @emails oncall+relay
+ * @format
+ * @oncall relay
  */
 
-// flowlint ambiguous-object-type:error
-
 'use strict';
+import type {NormalizationSplitOperation} from '../../util/NormalizationNode';
 
 import type {NormalizationRootNode} from '../../util/NormalizationNode';
 import type {RequestParameters} from 'relay-runtime/util/RelayConcreteNode';
@@ -45,13 +44,13 @@ function runWithFeatureFlags(setFlags: (typeof RelayFeatureFlags) => void) {
     'execute() a query with nested @match',
     environmentType => {
       describe(environmentType, () => {
-        let callbacks: {|
+        let callbacks: {
           +complete: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
           +error: JestMockFn<$ReadOnlyArray<Error>, mixed>,
           +next: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
           +start?: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
           +unsubscribe?: JestMockFn<$ReadOnlyArray<mixed>, mixed>,
-        |};
+        };
         let complete;
         let dataSource;
         let environment;
@@ -62,13 +61,13 @@ function runWithFeatureFlags(setFlags: (typeof RelayFeatureFlags) => void) {
         let next;
         let operation;
         let operationCallback;
-        let operationLoader: {|
+        let operationLoader: {
           get: (reference: mixed) => ?NormalizationRootNode,
           load: JestMockFn<
             $ReadOnlyArray<mixed>,
             Promise<?NormalizationRootNode>,
           >,
-        |};
+        };
         let plaintextRendererFragment;
         let plaintextRendererNormalizationFragment;
         let query;
@@ -79,7 +78,14 @@ function runWithFeatureFlags(setFlags: (typeof RelayFeatureFlags) => void) {
         let resolveFragments;
 
         beforeEach(() => {
-          resolveFragments = [];
+          resolveFragments = ([]: Array<
+            | any
+            | ((
+                result?:
+                  | Promise<NormalizationSplitOperation>
+                  | NormalizationSplitOperation,
+              ) => void),
+          >);
           setFlags(RelayFeatureFlags);
           markdownRendererNormalizationFragment = require('./__generated__/RelayModernEnvironmentExecuteWithSiblingAndNestedModuleTestMarkdownUserNameRenderer_name$normalization.graphql');
           plaintextRendererNormalizationFragment = require('./__generated__/RelayModernEnvironmentExecuteWithSiblingAndNestedModuleTestPlainUserNameRenderer_name$normalization.graphql');

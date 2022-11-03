@@ -6,16 +6,15 @@
  *
  * @flow strict-local
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
 import type {FragmentType} from 'relay-runtime';
 
 declare export opaque type RelayModernFlowtest_users$ref: FragmentType;
-export type RelayModernFlowtest_users = $ReadOnlyArray<{|
+export type RelayModernFlowtest_users = $ReadOnlyArray<{
   +name: ?string,
   +$fragmentType: RelayModernFlowtest_users$ref,
-|}>;
+}>;

@@ -5,19 +5,46 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict-local
- * @emails oncall+relay
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
-import type {RecordProxy, RecordSourceProxy} from '../store/RelayStoreTypes';
-import type {ReaderLinkedField, ReaderSelection} from '../util/ReaderNode';
+import type {
+  RecordProxy,
+  RecordSourceProxy,
+  MissingFieldHandler,
+} from '../store/RelayStoreTypes';
+import type {
+  ReaderLinkedField,
+  ReaderSelection,
+  ReaderScalarField,
+} from '../util/ReaderNode';
 import type {Variables} from '../util/RelayRuntimeTypes';
 
 const {getArgumentValues} = require('../store/RelayStoreUtils');
+const {
+  ACTOR_CHANGE,
+  ALIASED_FRAGMENT_SPREAD,
+  ALIASED_INLINE_FRAGMENT_SPREAD,
+  CLIENT_EDGE_TO_CLIENT_OBJECT,
+  CLIENT_EDGE_TO_SERVER_OBJECT,
+  CLIENT_EXTENSION,
+  CONDITION,
+  DEFER,
+  FLIGHT_FIELD,
+  FRAGMENT_SPREAD,
+  INLINE_DATA_FRAGMENT_SPREAD,
+  INLINE_FRAGMENT,
+  LINKED_FIELD,
+  MODULE_IMPORT,
+  RELAY_LIVE_RESOLVER,
+  RELAY_RESOLVER,
+  REQUIRED_FIELD,
+  SCALAR_FIELD,
+  STREAM,
+} = require('../util/RelayConcreteNode');
 
 const nonUpdatableKeys = ['id', '__id', '__typename', 'js'];
 
@@ -26,6 +53,7 @@ function createUpdatableProxy<TData: {...}>(
   variables: Variables,
   selections: $ReadOnlyArray<ReaderSelection>,
   recordSourceProxy: RecordSourceProxy,
+  missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>,
 ): TData {
   const mutableUpdatableProxy = {};
   updateProxyFromSelections(
@@ -34,6 +62,7 @@ function createUpdatableProxy<TData: {...}>(
     variables,
     selections,
     recordSourceProxy,
+    missingFieldHandlers,
   );
   if (__DEV__) {
     Object.freeze(mutableUpdatableProxy);
@@ -50,10 +79,11 @@ function updateProxyFromSelections<TData>(
   variables: Variables,
   selections: $ReadOnlyArray<ReaderSelection>,
   recordSourceProxy: RecordSourceProxy,
-) {
+  missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>,
+): void {
   for (const selection of selections) {
     switch (selection.kind) {
-      case 'LinkedField':
+      case LINKED_FIELD:
         if (selection.plural) {
           Object.defineProperty(
             mutableUpdatableProxy,
@@ -65,6 +95,7 @@ function updateProxyFromSelections<TData>(
                 variables,
                 updatableProxyRootRecord,
                 recordSourceProxy,
+                missingFieldHandlers,
               ),
               set: createSetterForPluralLinkedField(
                 selection,
@@ -84,6 +115,7 @@ function updateProxyFromSelections<TData>(
                 variables,
                 updatableProxyRootRecord,
                 recordSourceProxy,
+                missingFieldHandlers,
               ),
               set: createSetterForSingularLinkedField(
                 selection,
@@ -95,7 +127,7 @@ function updateProxyFromSelections<TData>(
           );
         }
         break;
-      case 'ScalarField':
+      case SCALAR_FIELD:
         const scalarFieldName = selection.alias ?? selection.name;
         Object.defineProperty(mutableUpdatableProxy, scalarFieldName, {
           get: function () {
@@ -105,11 +137,21 @@ function updateProxyFromSelections<TData>(
             );
             // Flow incorrect assumes that the return value for the get method must match
             // the set parameter.
-            return (updatableProxyRootRecord.getValue(
+            let value = (updatableProxyRootRecord.getValue(
               selection.name,
               newVariables,
               // $FlowFixMe[unclear-type] Typed by the generated updatable query flow type
             ): any);
+            if (value == null) {
+              value = getScalarUsingMissingFieldHandlers(
+                selection,
+                newVariables,
+                updatableProxyRootRecord,
+                recordSourceProxy,
+                missingFieldHandlers,
+              );
+            }
+            return value;
           },
           set: nonUpdatableKeys.includes(selection.name)
             ? undefined
@@ -128,7 +170,7 @@ function updateProxyFromSelections<TData>(
               },
         });
         break;
-      case 'InlineFragment':
+      case INLINE_FRAGMENT:
         if (updatableProxyRootRecord.getType() === selection.type) {
           updateProxyFromSelections(
             mutableUpdatableProxy,
@@ -136,22 +178,43 @@ function updateProxyFromSelections<TData>(
             variables,
             selection.selections,
             recordSourceProxy,
+            missingFieldHandlers,
           );
         }
         break;
-      case 'ClientExtension':
+      case CLIENT_EXTENSION:
         updateProxyFromSelections(
           mutableUpdatableProxy,
           updatableProxyRootRecord,
           variables,
           selection.selections,
           recordSourceProxy,
+          missingFieldHandlers,
         );
         break;
-      case 'FragmentSpread':
+      case FRAGMENT_SPREAD:
         // Explicitly ignore
         break;
+      case CONDITION:
+      case ACTOR_CHANGE:
+      case ALIASED_FRAGMENT_SPREAD:
+      case INLINE_DATA_FRAGMENT_SPREAD:
+      case ALIASED_INLINE_FRAGMENT_SPREAD:
+      case CLIENT_EDGE_TO_CLIENT_OBJECT:
+      case CLIENT_EDGE_TO_SERVER_OBJECT:
+      case DEFER:
+      case FLIGHT_FIELD:
+      case MODULE_IMPORT:
+      case RELAY_LIVE_RESOLVER:
+      case REQUIRED_FIELD:
+      case STREAM:
+      case RELAY_RESOLVER:
+        // These types of reader nodes are not currently handled.
+        throw new Error(
+          'Encountered an unexpected ReaderSelection variant in RelayRecordSourceProxy. This indicates a bug in Relay.',
+        );
       default:
+        (selection.kind: empty);
         throw new Error(
           'Encountered an unexpected ReaderSelection variant in RelayRecordSourceProxy. This indicates a bug in Relay.',
         );
@@ -236,13 +299,25 @@ function createGetterForPluralLinkedField(
   variables: Variables,
   updatableProxyRootRecord: RecordProxy,
   recordSourceProxy: RecordSourceProxy,
-) {
+  missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>,
+): () => ?$FlowFixMe {
   return function () {
     const newVariables = getArgumentValues(selection.args ?? [], variables);
-    const linkedRecords = updatableProxyRootRecord.getLinkedRecords(
+    let linkedRecords = updatableProxyRootRecord.getLinkedRecords(
       selection.name,
       newVariables,
     );
+
+    if (linkedRecords === undefined) {
+      linkedRecords = getPluralLinkedRecordUsingMissingFieldHandlers(
+        selection,
+        newVariables,
+        updatableProxyRootRecord,
+        recordSourceProxy,
+        missingFieldHandlers,
+      );
+    }
+
     if (linkedRecords != null) {
       return (linkedRecords.map(linkedRecord => {
         if (linkedRecord != null) {
@@ -253,6 +328,7 @@ function createGetterForPluralLinkedField(
             variables,
             selection.selections,
             recordSourceProxy,
+            missingFieldHandlers,
           );
           if (__DEV__) {
             Object.freeze(updatableProxy);
@@ -277,13 +353,24 @@ function createGetterForSingularLinkedField(
   variables: Variables,
   updatableProxyRootRecord: RecordProxy,
   recordSourceProxy: RecordSourceProxy,
-) {
+  missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>,
+): () => ?$FlowFixMe {
   return function () {
     const newVariables = getArgumentValues(selection.args ?? [], variables);
-    const linkedRecord = updatableProxyRootRecord.getLinkedRecord(
+    let linkedRecord = updatableProxyRootRecord.getLinkedRecord(
       selection.name,
       newVariables,
     );
+    if (linkedRecord === undefined) {
+      linkedRecord = getLinkedRecordUsingMissingFieldHandlers(
+        selection,
+        newVariables,
+        updatableProxyRootRecord,
+        recordSourceProxy,
+        missingFieldHandlers,
+      );
+    }
+
     if (linkedRecord != null) {
       const updatableProxy = {};
       updateProxyFromSelections(
@@ -292,6 +379,7 @@ function createGetterForSingularLinkedField(
         variables,
         selection.selections,
         recordSourceProxy,
+        missingFieldHandlers,
       );
       if (__DEV__) {
         Object.freeze(updatableProxy);
@@ -304,6 +392,76 @@ function createGetterForSingularLinkedField(
       return linkedRecord;
     }
   };
+}
+
+function getLinkedRecordUsingMissingFieldHandlers(
+  selection: ReaderLinkedField,
+  newVariables: Variables,
+  updatableProxyRootRecord: RecordProxy,
+  recordSourceProxy: RecordSourceProxy,
+  missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>,
+): ?RecordProxy {
+  for (const handler of missingFieldHandlers) {
+    if (handler.kind === 'linked') {
+      const newId = handler.handle(
+        selection,
+        updatableProxyRootRecord,
+        newVariables,
+        recordSourceProxy,
+      );
+      if (newId != null) {
+        return recordSourceProxy.get(newId);
+      }
+    }
+  }
+}
+
+function getPluralLinkedRecordUsingMissingFieldHandlers(
+  selection: ReaderLinkedField,
+  newVariables: Variables,
+  updatableProxyRootRecord: RecordProxy,
+  recordSourceProxy: RecordSourceProxy,
+  missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>,
+): ?Array<?RecordProxy> {
+  for (const handler of missingFieldHandlers) {
+    if (handler.kind === 'pluralLinked') {
+      const newIds = handler.handle(
+        selection,
+        updatableProxyRootRecord,
+        newVariables,
+        recordSourceProxy,
+      );
+      if (newIds != null) {
+        return newIds.map(newId => {
+          if (newId != null) {
+            return recordSourceProxy.get(newId);
+          }
+        });
+      }
+    }
+  }
+}
+
+function getScalarUsingMissingFieldHandlers(
+  selection: ReaderScalarField,
+  newVariables: Variables,
+  updatableProxyRootRecord: RecordProxy,
+  recordSourceProxy: RecordSourceProxy,
+  missingFieldHandlers: $ReadOnlyArray<MissingFieldHandler>,
+): mixed {
+  for (const handler of missingFieldHandlers) {
+    if (handler.kind === 'scalar') {
+      const value = handler.handle(
+        selection,
+        updatableProxyRootRecord,
+        newVariables,
+        recordSourceProxy,
+      );
+      if (value !== undefined) {
+        return value;
+      }
+    }
+  }
 }
 
 module.exports = {createUpdatableProxy};

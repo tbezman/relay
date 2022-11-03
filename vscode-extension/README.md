@@ -22,7 +22,14 @@ Search for "Relay GraphQL" in the VS Code extensions panel or install through [t
 
 - `relay.autoStartCompiler` (default: `false`) Whether or not we should automatically start the Relay Compiler in watch mode when you open a project.
 
-- `relay.outputLevel` (default: `quiet-with-errors`) Specify the output level of the Relay language server. The available options are
+- `relay.compilerOutputLevel` (default: `verbose`) Specify the output level of the Relay compiler. The available options are
+
+  - quiet
+  - quiet-with-errors
+  - verbose
+  - debug
+
+- `relay.lspOutputLevel` (default: `quiet-with-errors`) Specify the output level of the Relay language server. The available options are
 
   - quiet
   - quiet-with-errors
@@ -69,4 +76,4 @@ We do not support running multiple instances of the LSP at once. We currently us
 
 ## Credits
 
-- [`vscode-graphql`](https://github.com/graphql/graphiql/tree/main/packages/vscode-graphql). All of the grammars for syntax highlighting were taken directly from vscode-graphql.
+- [GraphQL Syntax](https://marketplace.visualstudio.com/items?itemName=GraphQL.vscode-graphql-syntax) All of the GraphQL syntax highlighting is supported by this extension.

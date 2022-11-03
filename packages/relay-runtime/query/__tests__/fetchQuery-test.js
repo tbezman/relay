@@ -5,11 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict-local
- * @emails oncall+relay
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -357,7 +355,7 @@ test('client-only query with error', () => {
   const observer = {next: jest.fn(), error: jest.fn()};
 
   // $FlowExpectedError[incompatible-call] - fetch query is expecting a fetchable query, `fetchQueryTest5Query` is client-only
-  fetchQuery(environment, query, {}).subscribe(observer);
+  fetchQuery<{...}, empty, mixed>(environment, query, {}).subscribe(observer);
 
   expect(observer.next).not.toBeCalled();
   expect(observer.error).toBeCalledWith(new Error('Expected ID or Text'));

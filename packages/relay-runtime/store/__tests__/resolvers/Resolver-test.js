@@ -4,9 +4,9 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @emails oncall+relay
  * @flow strict-local
  * @format
+ * @oncall relay
  */
 
 'use strict';
@@ -105,7 +105,7 @@ describe('Relay Resolver', () => {
     expect(data.me.name).toEqual(undefined); // Fields needed by resolver's fragment don't end up in the result
   });
 
-  it('can create a client edge query in our test enviornment that has valid import', () => {
+  it('can create a client edge query in our test environment that has valid import', () => {
     // This is not really a runtime test, but more a test to confirm that this query generates
     // an artifact with valid imports in our non-Haste test environment.
     const clientEdgeRuntimeArtifact = graphql`

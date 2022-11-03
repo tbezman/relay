@@ -6,9 +6,8 @@
  *
  * @flow
  * @format
+ * @oncall relay
  */
-
-// flowlint ambiguous-object-type:error
 
 'use strict';
 
@@ -31,6 +30,7 @@ const {
   LINKED_FIELD,
   LINKED_HANDLE,
   MODULE_IMPORT,
+  RELAY_RESOLVER,
   SCALAR_FIELD,
   SCALAR_HANDLE,
   STREAM,
@@ -38,14 +38,14 @@ const {
 } = require('../util/RelayConcreteNode');
 const warning = require('warning');
 
-type ValidationContext = {|
+type ValidationContext = {
   visitedPaths: Set<string>,
   path: string,
   variables: Variables,
   missingDiff: Object,
   extraDiff: Object,
   moduleImportPaths: Set<string>,
-|};
+};
 // $FlowFixMe[method-unbinding] added when improving typing for this parameters
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 
@@ -121,7 +121,7 @@ if (__DEV__) {
     optimisticResponse: Object,
     selection: NormalizationSelection,
     context: ValidationContext,
-  ) => {
+  ): void => {
     switch (selection.kind) {
       case CONDITION:
         validateSelections(optimisticResponse, selection.selections, context);
@@ -164,6 +164,7 @@ if (__DEV__) {
         return validateModuleImport(context);
       case TYPE_DISCRIMINATOR:
         return validateAbstractKey(context, selection.abstractKey);
+      case RELAY_RESOLVER:
       case LINKED_HANDLE:
       case SCALAR_HANDLE:
       case DEFER:

@@ -6,13 +6,10 @@
  *
  * @flow strict
  * @format
+ * @oncall relay
  */
 
-// flowlint ambiguous-object-type:error
-
 'use strict';
-
-export type RecordState = $Keys<typeof RelayRecordState>;
 
 const RelayRecordState = {
   /**
@@ -33,5 +30,7 @@ const RelayRecordState = {
    */
   UNKNOWN: 'UNKNOWN',
 };
+
+export type RecordState = $Keys<typeof RelayRecordState>;
 
 module.exports = RelayRecordState;
